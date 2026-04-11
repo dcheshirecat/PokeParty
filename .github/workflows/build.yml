@@ -154,23 +154,30 @@ jobs:
           }
           EOF
 
-          # ── Launcher icon (Poké Ball vector) ──────────────────────────────────
+          # ── Launcher icon (Poké Ball — paths only, no rect/circle tags) ─────────
           cat > app/src/main/res/drawable/ic_launcher_foreground.xml << 'EOF'
           <?xml version="1.0" encoding="utf-8"?>
           <vector xmlns:android="http://schemas.android.com/apk/res/android"
               android:width="108dp" android:height="108dp"
               android:viewportWidth="108" android:viewportHeight="108">
+              <!-- Top half red -->
               <path android:fillColor="#E53935"
-                  android:pathData="M54,20 A34,34 0 0,1 88,54 L54,54 Z"/>
-              <path android:fillColor="#E53935"
-                  android:pathData="M20,54 A34,34 0 0,1 54,20 L54,54 Z"/>
+                  android:pathData="M54,20 A34,34 0 0,1 88,54 L20,54 A34,34 0 0,1 54,20 Z"/>
+              <!-- Bottom half white -->
               <path android:fillColor="#FAFAFA"
-                  android:pathData="M20,54 A34,34 0 0,0 88,54 L54,54 Z"/>
-              <rect android:fillColor="#212121"
-                  android:left="20" android:top="52" android:right="88" android:bottom="56"/>
-              <circle android:fillColor="#212121" android:cx="54" android:cy="54" android:r="10"/>
-              <circle android:fillColor="#FAFAFA" android:cx="54" android:cy="54" android:r="6"/>
-              <circle android:fillColor="#FFFFFF88" android:cx="62" android:cy="32" android:r="4"/>
+                  android:pathData="M20,54 A34,34 0 0,0 88,54 Z"/>
+              <!-- Centre divider band (rect as path) -->
+              <path android:fillColor="#212121"
+                  android:pathData="M20,52 L88,52 L88,56 L20,56 Z"/>
+              <!-- Centre button outer (circle as path) -->
+              <path android:fillColor="#212121"
+                  android:pathData="M54,44 A10,10 0 1,1 53.999,44 Z"/>
+              <!-- Centre button inner -->
+              <path android:fillColor="#FAFAFA"
+                  android:pathData="M54,48 A6,6 0 1,1 53.999,48 Z"/>
+              <!-- Glint -->
+              <path android:fillColor="#CCFFFFFF"
+                  android:pathData="M62,28 A4,4 0 1,1 61.999,28 Z"/>
           </vector>
           EOF
 
