@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Pokémon Encounter</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg1: #0d0d1a; --bg2: #111128; --bg3: #161640;
+      --gold: #FFD54F; --blue: #4FC3F7; --pink: #F48FB1;
+      --green: #81C784; --red: #EF9A9A; --purple: #CE93D8;
+      --text: #E8E8F8; --muted: rgba(232,232,248,0.45); --faint: rgba(232,232,248,0.15);
+      --card: rgba(255,255,255,0.05); --border: rgba(255,255,255,0.1);
+      --radius: 16px; --font: 'Press Start 2P', monospace;
+    }
+
+    html, body {
+      height: 100%; width: 100%;
+      background: var(--bg1);
+      font-family: var(--font);
+      color: var(--text);
+      overflow: hidden;
+      touch-action: manipulation;
+    }
+
+    #app {
+      height: 100vh; width: 100%;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      position: relative; overflow: hidden;
+    }
+
+    /* Stars background */
+    #stars {
+      position: fixed; inset: 0; pointer-events: none; z-index: 0;
+      background-image:
+        radial-gradient(1px 1px at 8% 12%, #fff, transparent),
+        radial-gradient(1px 1px at 22% 78%, rgba(255,255,255,.7), transparent),
+        radial-gradient(1.5px 1.5px at 35% 35%, rgba(255,213,79,.8), transparent),
+        radial-gradient(1px 1px at 48% 5%, #fff, transparent),
+        radial-gradient(1px 1px at 65% 60%, rgba(255,255,255,.6), transparent),
+        radial-gradient(1.5px 1.5px at 78% 25%, rgba(79,195,247,.9), transparent),
+        radial-gradient(1px 1px at 88% 72%, #fff, transparent),
+        radial-gradient(1px 1px at 14% 45%, rgba(255,255,255,.5), transparent),
+        radial-gradient(1px 1px at 55% 88%, rgba(206,147,216,.8), transparent),
+        radial-gradient(1px 1px at 92% 10%, #fff, transparent),
+        radial-gradient(1px 1px at 3% 92%, rgba(255,255,255,.6), transparent),
+        radial-gradient(1.5px 1.5px at 72% 48%, rgba(129,199,132,.7), transparent);
+    }
+
+    .screen {
+      position: absolute; inset: 0; z-index: 1;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 12px;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+    .screen.active { opacity: 1; pointer-events: all; }
+
+    .card {
+      background: var(--card);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px 20px;
+      width: 100%; max-width: 420px;
+      box-shadow: 0 0 60px rgba(79,195,247,.08);
+    }
+
+    .btn {
+      font-family: var(--font);
+      border: none; border-radius: 12px; cursor: pointer;
+      font-size: 8px; line-height: 1;
+      transition: transform .12s, opacity .12s;
+      user-select: none; -webkit-tap-highlight-color: transparent;
+    }
+    .btn:active { transform: scale(0.91); }
+    .btn:disabled { opacity: .35; pointer-events: none; }
+    .btn-primary {
+      background: linear-gradient(135deg, #FF6B35, #FFD54F);
+      color: #0d0d1a; padding: 13px 18px;
+      box-shadow: 0 4px 18px rgba(255,107,53,.35);
+    }
+    .btn-secondary {
+      background: rgba(255,255,255,.08);
+      color: var(--muted); padding: 13px 18px;
+      border: 1px solid var(--border);
+    }
+    .btn-blue {
+      background: linear-gradient(135deg, #4FC3F7, #7986CB);
+      color: #fff; padding: 13px 18px;
+      box-shadow: 0 4px 18px rgba(79,195,247,.3);
+    }
+    .btn-sm { padding: 7px 12px; font-size: 7px; border-radius: 8px; }
+
+    @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+    @keyframes shake { 0%,100%{transform:rotate(0)} 25%{transform:rotate(-18deg)} 75%{transform:rotate(18deg)} }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+    @keyframes slideUp { from{opacity:0;transform:translateY(18px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes pop { 0%{transform:scale(0)} 70%{transform:scale(1.15)} 100%{transform:scale(1)} }
+    @keyframes spin { to{transform:rotate(360deg)} }
+    @keyframes shiny { 0%,100%{filter:drop-shadow(0 0 8px gold)} 50%{filter:drop-shadow(0 0 28px gold) brightness(1.4)} }
+    @keyframes ballBounce { 0%{transform:translate(0,0) rotate(0)} 30%{transform:translate(60px,-90px) rotate(180deg) scale(.7)} 60%{transform:translate(0,0) rotate(360deg) scale(1.1)} 100%{transform:translate(0,0) rotate(360deg) scale(1)} }
+    @keyframes explodeStars { 0%{transform:scale(1);opacity:1} 100%{transform:scale(3);opacity:0} }
+    @keyframes hpDrain { from{width:var(--from)} to{width:var(--to)} }
+    @keyframes flashDamage { 0%,100%{opacity:1} 50%{opacity:.1} }
+    @keyframes confetti { 0%{transform:translateY(0) rotate(0);opacity:1} 100%{transform:translateY(60px) rotate(720deg);opacity:0} }
+
+    .floating { animation: float 3s ease-in-out infinite; }
+    .shiny-anim { animation: shiny 1.5s ease-in-out infinite; }
+
+    /* HP Bar */
+    .hp-wrap { background: rgba(255,255,255,.1); border-radius: 4px; height: 8px; overflow: hidden; }
+    .hp-bar { height: 100%; border-radius: 4px; transition: width 0.5s ease, background 0.5s ease; }
+
+    /* Type badges */
+    .type-badge {
+      padding: 3px 8px; border-radius: 20px; font-size: 6px;
+      font-weight: bold; text-transform: uppercase; letter-spacing: .5px;
+    }
+
+    /* Notification toast */
+    #toast {
+      position: fixed; top: 16px; left: 50%; transform: translateX(-50%);
+      padding: 10px 18px; border-radius: 20px; font-size: 7px; color: #fff;
+      z-index: 999; pointer-events: none; white-space: nowrap;
+      animation: slideUp .3s ease-out;
+      box-shadow: 0 4px 20px rgba(0,0,0,.4);
+      display: none;
+    }
+
+    /* Streak badge */
+    .streak-badge {
+      background: linear-gradient(135deg, #FF6B35, #FFD54F);
+      color: #0d0d1a; border-radius: 20px; padding: 4px 10px; font-size: 7px;
+    }
+
+    /* Dex grid */
+    #dex-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 8px; overflow-y: auto; max-height: 52vh;
+    }
+    .dex-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 10px; padding: 8px 4px; text-align: center;
+      transition: transform .15s;
+    }
+    .dex-card:active { transform: scale(.93); }
+    .dex-card img { width: 52px; height: 52px; object-fit: contain; }
+
+    /* Battle area */
+    #battle-area { position: relative; height: 200px; }
+    #enemy-sprite { position: absolute; right: 20px; top: 0; width: 120px; height: 120px; object-fit: contain; }
+    #enemy-hp-wrap { position: absolute; right: 0; top: 128px; width: 160px; }
+    #player-badge { position: absolute; left: 0; top: 80px; width: 150px; }
+
+    /* Move buttons grid */
+    #move-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+
+    /* Ball animation layer */
+    #ball-layer { position: absolute; top: 20px; right: 20px; width: 48px; height: 48px; z-index: 10; pointer-events: none; }
+    #ball-emoji { font-size: 36px; display: block; }
+
+    ::-webkit-scrollbar { width: 3px; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.2); border-radius: 2px; }
+  </style>
+</head>
+<body>
+<div id="stars"></div>
+<div id="toast"></div>
+<div id="app">
+
+  <!-- TITLE -->
+  <div class="screen active" id="s-title">
+    <div class="card" style="text-align:center">
+      <div style="font-size:52px;margin-bottom:10px" class="floating">✨</div>
+      <h1 style="color:var(--gold);font-size:15px;line-height:1.9;letter-spacing:1px">POKÉMON</h1>
+      <h2 style="color:var(--blue);font-size:9px;letter-spacing:3px;margin-bottom:24px">ENCOUNTER</h2>
+      <div style="display:flex;justify-content:center;gap:10px;font-size:28px;margin-bottom:20px">
+        <span style="animation:float 1.4s ease-in-out infinite;display:inline-block">🔴</span>
+        <span style="animation:float 1.6s ease-in-out infinite .1s;display:inline-block">🟡</span>
+        <span style="animation:float 1.8s ease-in-out infinite .2s;display:inline-block">🔵</span>
+        <span style="animation:float 1.5s ease-in-out infinite .3s;display:inline-block">🟢</span>
+        <span style="animation:float 1.7s ease-in-out infinite .15s;display:inline-block">🟣</span>
+      </div>
+      <p style="color:var(--muted);font-size:7px;line-height:2.2;margin-bottom:6px">Explore tall grass • Battle wild Pokémon<br>Catch them • Fill your Pokédex!</p>
+      <p style="color:var(--faint);font-size:6px;margin-bottom:24px">Gen I–III • 386 Pokémon • Shiny hunting!</p>
+      <div id="streak-display" style="margin-bottom:16px;display:none">
+        <span class="streak-badge" id="streak-text">🔥 Streak: 0</span>
+      </div>
+      <button class="btn btn-primary" style="width:100%;font-size:9px" onclick="startAdventure()">▶ START ADVENTURE</button>
+      <button class="btn btn-secondary" style="width:100%;margin-top:10px;font-size:8px" onclick="showDex()">📖 POKÉDEX (<span id="title-dex-count">0</span>)</button>
+      <p style="color:var(--faint);font-size:6px;margin-top:14px">Balls: <span id="title-balls">10</span> · Data: PokéAPI · Gen I-III</p>
+    </div>
+  </div>
+
+  <!-- BATTLE -->
+  <div class="screen" id="s-battle">
+    <div class="card">
+      <!-- Top row -->
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <button class="btn btn-secondary btn-sm" onclick="runAway()">← Run</button>
+        <div style="color:var(--gold);font-size:7px">🎯 Balls: <span id="battle-balls">10</span></div>
+        <button class="btn btn-secondary btn-sm" onclick="showDex()">📖 DEX</button>
+      </div>
+
+      <!-- Wild banner -->
+      <div id="wild-banner" style="text-align:center;font-size:7px;margin-bottom:12px;padding:5px 10px;border-radius:8px;animation:pulse 2s infinite"></div>
+
+      <!-- Battle area -->
+      <div id="battle-area">
+        <div id="ball-layer"><span id="ball-emoji"></span></div>
+
+        <!-- Enemy info (top left) -->
+        <div id="enemy-hp-wrap" style="left:0;right:auto;top:0;width:160px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
+            <span id="enemy-name" style="font-size:7px;text-transform:capitalize;color:var(--text)"></span>
+            <span id="shiny-badge" style="font-size:8px;display:none">✨</span>
+          </div>
+          <div style="font-size:6px;color:var(--muted);margin-bottom:4px">HP: <span id="enemy-hp-num">100</span></div>
+          <div class="hp-wrap"><div id="enemy-hp-bar" class="hp-bar" style="width:100%;background:var(--green)"></div></div>
+          <div id="enemy-types" style="display:flex;gap:4px;margin-top:5px;flex-wrap:wrap"></div>
+        </div>
+
+        <!-- Enemy sprite -->
+        <img id="enemy-sprite" src="" alt="">
+
+        <!-- Player info (bottom left) -->
+        <div id="player-badge">
+          <div style="font-size:7px;color:var(--muted);margin-bottom:3px">You — HP: <span id="player-hp-num">100</span></div>
+          <div class="hp-wrap"><div id="player-hp-bar" class="hp-bar" style="width:100%;background:var(--blue)"></div></div>
+        </div>
+      </div>
+
+      <!-- Battle log -->
+      <div id="battle-log" style="background:rgba(0,0,0,.3);border-radius:8px;padding:8px 10px;font-size:7px;color:var(--muted);min-height:28px;margin-bottom:10px;line-height:1.8">Choose your action!</div>
+
+      <!-- Move grid -->
+      <div id="move-grid">
+        <button class="btn" style="background:rgba(255,107,53,.2);color:#FF6B35;border:1px solid rgba(255,107,53,.3);padding:10px 6px;font-size:7px;border-radius:10px" onclick="useMove(0)">
+          ⚡ Tackle<br><span style="font-size:6px;opacity:.7">10-20 dmg</span>
+        </button>
+        <button class="btn" style="background:rgba(79,195,247,.2);color:#4FC3F7;border:1px solid rgba(79,195,247,.3);padding:10px 6px;font-size:7px;border-radius:10px" onclick="useMove(1)">
+          💫 Quick Atk<br><span style="font-size:6px;opacity:.7">15-25 dmg</span>
+        </button>
+        <button class="btn" style="background:rgba(206,147,216,.2);color:#CE93D8;border:1px solid rgba(206,147,216,.3);padding:10px 6px;font-size:7px;border-radius:10px" onclick="useMove(2)">
+          🌿 Leer<br><span style="font-size:6px;opacity:.7">Weaken+5</span>
+        </button>
+        <button class="btn btn-primary btn-sm" style="font-size:7px;padding:10px 6px" id="throw-btn" onclick="throwBall()">
+          ⚪ Throw Ball<br><span style="font-size:6px;opacity:.7">Catch!</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CATCH RESULT -->
+  <div class="screen" id="s-result">
+    <div class="card" style="text-align:center;animation:slideUp .4s ease-out">
+      <div id="result-icon" style="font-size:52px;margin-bottom:14px"></div>
+      <h2 id="result-title" style="font-size:11px;margin-bottom:8px"></h2>
+      <p id="result-sub" style="font-size:8px;color:var(--muted);margin-bottom:16px"></p>
+      <img id="result-sprite" src="" alt="" style="height:100px;margin-bottom:16px">
+      <div id="result-bonus" style="margin-bottom:16px"></div>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-primary" style="flex:2" onclick="startAdventure()">🌿 Next Encounter</button>
+        <button class="btn btn-secondary" style="flex:1" onclick="showDex()">📖 DEX</button>
+      </div>
+      <div id="no-balls-panel" style="display:none;margin-top:14px">
+        <p style="color:var(--red);font-size:7px;margin-bottom:10px;animation:pulse 1.5s infinite">⚠ Out of Poké Balls!</p>
+        <button class="btn btn-secondary" style="width:100%;font-size:7px" onclick="restockBalls()">🎒 Restock (free 10 balls)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- POKÉDEX -->
+  <div class="screen" id="s-dex">
+    <div class="card" style="max-height:96vh;display:flex;flex-direction:column">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <h2 style="color:var(--gold);font-size:10px">📖 POKÉDEX</h2>
+        <button class="btn btn-secondary btn-sm" onclick="goBack()">← Back</button>
+      </div>
+      <div style="color:var(--muted);font-size:7px;margin-bottom:8px">
+        <span id="dex-count">0</span> / 386 caught &nbsp;·&nbsp; Shiny: <span id="dex-shiny-count">0</span> ✨
+      </div>
+      <!-- Progress -->
+      <div class="hp-wrap" style="height:6px;margin-bottom:12px">
+        <div id="dex-progress" style="height:100%;background:linear-gradient(90deg,var(--blue),var(--gold));border-radius:4px;width:0%;transition:width .6s ease"></div>
+      </div>
+      <!-- Filter -->
+      <input id="dex-search" placeholder="Search name..." oninput="renderDex()" style="background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-family:var(--font);font-size:7px;margin-bottom:10px;width:100%;outline:none">
+      <!-- Empty state -->
+      <div id="dex-empty" style="text-align:center;padding:30px 0;display:none">
+        <div style="font-size:42px;margin-bottom:12px">🌿</div>
+        <p style="color:var(--muted);font-size:7px">No Pokémon caught yet!<br>Go explore the tall grass.</p>
+      </div>
+      <!-- Grid -->
+      <div id="dex-grid"></div>
+      <button class="btn btn-primary" style="margin-top:12px;font-size:8px" onclick="startAdventure()">🌿 Go Catch More!</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ─── State ───────────────────────────────────────────────────────────────────
+const MAX_POKEMON = 386;
+const PLAYER_MAX_HP = 100;
+const SHINY_CHANCE = 1 / 512;
+
+let state = {
+  balls: 10,
+  caught: [],        // [{id,name,sprite,types,isShiny}]
+  streak: 0,
+  lastPlayDate: null,
+  playerHP: PLAYER_MAX_HP,
+};
+
+let wild = null;     // current wild Pokémon encounter object
+let battleActive = false;
+let leerStacks = 0;  // each Leer adds 5% catch bonus
+let prevScreen = 's-title';
+
+// ─── Persistence ─────────────────────────────────────────────────────────────
+function save() {
+  try { localStorage.setItem('poke_save', JSON.stringify(state)); } catch(e){}
+}
+function load() {
+  try {
+    const d = JSON.parse(localStorage.getItem('poke_save') || '{}');
+    if (d.balls !== undefined) state = d;
+  } catch(e){}
+}
+
+// ─── Streak logic ─────────────────────────────────────────────────────────────
+function checkStreak() {
+  const today = new Date().toDateString();
+  const last = state.lastPlayDate;
+  if (!last) {
+    state.streak = 1;
+  } else {
+    const diff = (new Date(today) - new Date(last)) / 86400000;
+    if (diff === 1) state.streak++;
+    else if (diff > 1) state.streak = 1;
+  }
+  state.lastPlayDate = today;
+  save();
+}
+
+function streakBalls() {
+  // Bonus balls for streak (max +5)
+  return Math.min(state.streak - 1, 5);
+}
+
+// ─── Sound (Web Audio API) ────────────────────────────────────────────────────
+let audioCtx = null;
+function getAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+function playTone(freq, type, dur, vol=0.18, delay=0) {
+  try {
+    const ctx = getAudio();
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.connect(g); g.connect(ctx.destination);
+    o.type = type; o.frequency.setValueAtTime(freq, ctx.currentTime+delay);
+    g.gain.setValueAtTime(vol, ctx.currentTime+delay);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+delay+dur);
+    o.start(ctx.currentTime+delay); o.stop(ctx.currentTime+delay+dur);
+  } catch(e){}
+}
+function sfx(name) {
+  switch(name) {
+    case 'encounter':
+      playTone(440,'sine',.15); playTone(660,'sine',.15,.18,.15);
+      playTone(880,'sine',.25,.18,.3); break;
+    case 'shiny':
+      [0,.08,.16,.24,.32].forEach((d,i)=>playTone(440+i*110,'sine',.12,.22,d)); break;
+    case 'tackle':
+      playTone(200,'sawtooth',.12,.2); break;
+    case 'quick':
+      playTone(350,'square',.08,.15); playTone(500,'square',.08,.15,.09); break;
+    case 'leer':
+      playTone(150,'triangle',.2,.15); break;
+    case 'throw':
+      playTone(500,'sine',.08,.15); playTone(300,'sine',.1,.15,.1); break;
+    case 'shake':
+      playTone(180,'sawtooth',.15,.2); break;
+    case 'caught':
+      [0,.12,.24,.38].forEach((d,i)=>playTone(330+i*110,'sine',.18,.22,d)); break;
+    case 'escaped':
+      playTone(300,'sine',.1,.2); playTone(200,'sine',.15,.2,.12); break;
+    case 'fainted':
+      playTone(400,'sawtooth',.12,.2); playTone(250,'sawtooth',.2,.2,.15);
+      playTone(150,'sawtooth',.3,.2,.38); break;
+    case 'hit':
+      playTone(220,'sawtooth',.1,.18); break;
+    case 'levelup':
+      [330,440,550,660].forEach((f,i)=>playTone(f,'sine',.14,.2,i*.12)); break;
+  }
+}
+
+// ─── Type data ────────────────────────────────────────────────────────────────
+const TYPE_COLORS = {
+  fire:'#FF6B35',water:'#4FC3F7',grass:'#81C784',electric:'#FFD54F',
+  psychic:'#F48FB1',ice:'#80DEEA',dragon:'#7986CB',dark:'#8D6E63',
+  fairy:'#F8BBD9',normal:'#BCAAA4',fighting:'#EF9A9A',flying:'#90CAF9',
+  poison:'#CE93D8',ground:'#FFCC80',rock:'#A5D6A7',bug:'#DCEDC8',
+  ghost:'#9575CD',steel:'#CFD8DC',
+};
+
+function typeColor(t) { return TYPE_COLORS[t] || '#BCAAA4'; }
+
+function rarityOf(id) {
+  if (id<=10) return {label:'⭐ Legendary',color:'#FFD700',catchBase:.12};
+  if (id<=30) return {label:'💜 Ultra Rare',color:'#CE93D8',catchBase:.22};
+  if (id<=60) return {label:'🔵 Rare',color:'#4FC3F7',catchBase:.37};
+  if (id<=100) return {label:'🟢 Uncommon',color:'#81C784',catchBase:.52};
+  return {label:'⚪ Common',color:'#BCAAA4',catchBase:.68};
+}
+
+// ─── Screen management ────────────────────────────────────────────────────────
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function goBack() { showScreen(prevScreen); }
+
+// ─── Toast ────────────────────────────────────────────────────────────────────
+let toastTimer = null;
+function toast(msg, color='#81C784') {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.style.background = color; el.style.display = 'block';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>{ el.style.display='none'; }, 2200);
+}
+
+// ─── Title screen refresh ─────────────────────────────────────────────────────
+function refreshTitle() {
+  document.getElementById('title-balls').textContent = state.balls;
+  document.getElementById('title-dex-count').textContent = state.caught.length;
+  const sd = document.getElementById('streak-display');
+  if (state.streak > 1) {
+    sd.style.display = 'block';
+    document.getElementById('streak-text').textContent = `🔥 ${state.streak} day streak!`;
+  }
+}
+
+// ─── Fetch & start encounter ──────────────────────────────────────────────────
+async function startAdventure() {
+  if (state.balls <= 0) {
+    toast('No Poké Balls! Restock first.','#FF6B35'); return;
+  }
+  showScreen('s-battle');
+  battleActive = false;
+  leerStacks = 0;
+  state.playerHP = PLAYER_MAX_HP;
+  setMoveButtons(false);
+  document.getElementById('battle-log').textContent = '🌿 Rustling in the tall grass...';
+  document.getElementById('enemy-sprite').src = '';
+  document.getElementById('wild-banner').textContent = '';
+  document.getElementById('ball-emoji').textContent = '';
+
+  try {
+    const id = Math.floor(Math.random() * MAX_POKEMON) + 1;
+    const res = await fetch(`https://pokeapi.co/api/v2/pokemon/${id}`);
+    const data = await res.json();
+    const isShiny = Math.random() < SHINY_CHANCE;
+    const maxHp = data.stats.find(s=>s.stat.name==='hp')?.base_stat || 60;
+
+    wild = {
+      id: data.id,
+      name: data.name,
+      sprite: isShiny
+        ? (data.sprites.front_shiny || data.sprites.other?.['official-artwork']?.front_default || data.sprites.front_default)
+        : (data.sprites.other?.['official-artwork']?.front_default || data.sprites.front_default),
+      types: data.types.map(t=>t.type.name),
+      maxHp, hp: maxHp,
+      atk: data.stats.find(s=>s.stat.name==='attack')?.base_stat || 40,
+      isShiny,
+    };
+
+    renderBattle();
+    if (isShiny) { sfx('shiny'); toast('✨ A SHINY Pokémon appeared!', '#FFD54F'); }
+    else sfx('encounter');
+
+    battleActive = true;
+    setMoveButtons(true);
+  } catch(e) {
+    document.getElementById('battle-log').textContent = '⚠ Connection error. Try again.';
+    toast('Connection error!', '#FF6B35');
+  }
+}
+
+// ─── Render battle UI ─────────────────────────────────────────────────────────
+function renderBattle() {
+  const r = rarityOf(wild.id);
+  const banner = document.getElementById('wild-banner');
+  banner.textContent = `⚡ A wild ${wild.name} appeared! ${r.label}`;
+  banner.style.background = `${r.color}22`;
+  banner.style.color = r.color;
+  banner.style.border = `1px solid ${r.color}44`;
+
+  document.getElementById('enemy-name').textContent = `#${String(wild.id).padStart(3,'0')} ${wild.name}`;
+  document.getElementById('shiny-badge').style.display = wild.isShiny ? 'inline' : 'none';
+
+  const img = document.getElementById('enemy-sprite');
+  img.src = wild.sprite;
+  img.style.filter = `drop-shadow(0 0 16px ${typeColor(wild.types[0])}88)`;
+  img.className = wild.isShiny ? 'shiny-anim' : 'floating';
+
+  // Types
+  const typesEl = document.getElementById('enemy-types');
+  typesEl.innerHTML = wild.types.map(t=>
+    `<span class="type-badge" style="background:${typeColor(t)};color:#0d0d1a">${t}</span>`
+  ).join('');
+
+  updateHPBars();
+  document.getElementById('battle-balls').textContent = state.balls;
+  document.getElementById('battle-log').textContent = 'What will you do?';
+}
+
+function updateHPBars() {
+  // Enemy HP
+  const ePct = Math.max(0, (wild.hp / wild.maxHp) * 100);
+  const eBar = document.getElementById('enemy-hp-bar');
+  eBar.style.width = ePct + '%';
+  eBar.style.background = ePct > 50 ? '#81C784' : ePct > 25 ? '#FFD54F' : '#EF9A9A';
+  document.getElementById('enemy-hp-num').textContent = Math.max(0, wild.hp);
+
+  // Player HP
+  const pPct = Math.max(0, (state.playerHP / PLAYER_MAX_HP) * 100);
+  const pBar = document.getElementById('player-hp-bar');
+  pBar.style.width = pPct + '%';
+  pBar.style.background = pPct > 50 ? '#4FC3F7' : pPct > 25 ? '#FFD54F' : '#EF9A9A';
+  document.getElementById('player-hp-num').textContent = Math.max(0, state.playerHP);
+}
+
+function setMoveButtons(enabled) {
+  document.querySelectorAll('#move-grid .btn').forEach(b => b.disabled = !enabled);
+}
+
+// ─── Battle moves ─────────────────────────────────────────────────────────────
+const MOVES = [
+  { name:'Tackle',  dmg: [10,20], sfx:'tackle' },
+  { name:'Quick Atk', dmg:[15,25], sfx:'quick' },
+  { name:'Leer', dmg:[0,0], sfx:'leer', leer:true },
+];
+
+async function useMove(idx) {
+  if (!battleActive) return;
+  setMoveButtons(false);
+  const move = MOVES[idx];
+  const log = document.getElementById('battle-log');
+
+  // Player attacks
+  if (move.leer) {
+    leerStacks++;
+    log.textContent = `You used Leer! ${wild.name}'s guard dropped. (+5% catch)`;
+    sfx('leer');
+  } else {
+    const dmg = Math.floor(Math.random() * (move.dmg[1]-move.dmg[0]+1)) + move.dmg[0];
+    wild.hp = Math.max(0, wild.hp - dmg);
+    log.textContent = `You used ${move.name}! Dealt ${dmg} damage.`;
+    sfx(move.sfx);
+    const img = document.getElementById('enemy-sprite');
+    img.style.animation = 'flashDamage .4s ease';
+    setTimeout(()=>{ img.style.animation = wild.isShiny ? 'shiny 1.5s infinite' : 'float 3s infinite'; },400);
+    updateHPBars();
+  }
+
+  if (wild.hp <= 0) {
+    log.textContent = `${wild.name} fainted! Can't catch it now... 💨`;
+    sfx('fainted');
+    battleActive = false;
+    await delay(1200);
+    showResult(false, true);
+    return;
+  }
+
+  // Enemy counter-attack
+  await delay(700);
+  const enemyDmg = Math.floor(Math.random() * (wild.atk / 4)) + 2;
+  state.playerHP = Math.max(0, state.playerHP - enemyDmg);
+  log.textContent += `\n${wild.name} attacks! You take ${enemyDmg} dmg.`;
+  sfx('hit');
+  updateHPBars();
+
+  if (state.playerHP <= 0) {
+    log.textContent = `You blacked out! ${wild.name} escaped... 💨`;
+    sfx('fainted');
+    battleActive = false;
+    await delay(1200);
+    showResult(false, false);
+    return;
+  }
+
+  await delay(400);
+  setMoveButtons(true);
+  log.textContent = 'What will you do?';
+}
+
+// ─── Throw ball ───────────────────────────────────────────────────────────────
+async function throwBall() {
+  if (!battleActive || state.balls <= 0) return;
+  setMoveButtons(false);
+  state.balls--;
+  save();
+  document.getElementById('battle-balls').textContent = state.balls;
+
+  sfx('throw');
+  const ballEl = document.getElementById('ball-emoji');
+  ballEl.textContent = '⚪';
+  ballEl.style.animation = 'ballBounce .7s ease-out';
+
+  await delay(700);
+
+  // Calculate catch chance
+  const r = rarityOf(wild.id);
+  const hpMod = 1 + (1 - wild.hp/wild.maxHp) * 0.6; // up to +60% at 0 hp
+  const leerMod = leerStacks * 0.05;
+  const catchChance = Math.min(0.93, (r.catchBase + leerMod) * hpMod);
+
+  const log = document.getElementById('battle-log');
+  log.textContent = '⚪ The ball is shaking...';
+
+  // Shake sequence
+  ballEl.textContent = '⚪';
+  for (let i = 0; i < 3; i++) {
+    ballEl.style.animation = 'shake .45s ease-in-out';
+    sfx('shake');
+    await delay(500);
+    ballEl.style.animation = '';
+    await delay(200);
+  }
+
+  const success = Math.random() < catchChance;
+
+  if (success) {
+    ballEl.style.animation = 'explodeStars .5s ease-out forwards';
+    sfx('caught');
+    log.textContent = `✨ Gotcha! ${wild.name} was caught!`;
+
+    const alreadyHave = state.caught.find(p => p.id === wild.id && !wild.isShiny);
+    if (!alreadyHave || wild.isShiny) {
+      state.caught.push({ id:wild.id, name:wild.name, sprite:wild.sprite, types:wild.types, isShiny:wild.isShiny });
+      save();
+    }
+
+    battleActive = false;
+    await delay(800);
+    showResult(true, false, wild.isShiny);
+  } else {
+    ballEl.textContent = '💨';
+    sfx('escaped');
+    log.textContent = `${wild.name} broke free!`;
+
+    if (state.balls <= 0) {
+      battleActive = false;
+      await delay(900);
+      showResult(false, false);
+      return;
+    }
+
+    // Enemy counter
+    await delay(600);
+    const enemyDmg = Math.floor(Math.random() * (wild.atk / 5)) + 1;
+    state.playerHP = Math.max(0, state.playerHP - enemyDmg);
+    log.textContent = `${wild.name} broke free! It attacks! You take ${enemyDmg} dmg.`;
+    sfx('hit');
+    updateHPBars();
+
+    if (state.playerHP <= 0) {
+      sfx('fainted');
+      battleActive = false;
+      await delay(900);
+      showResult(false, false);
+      return;
+    }
+
+    ballEl.textContent = '';
+    setMoveButtons(true);
+    await delay(400);
+    log.textContent = 'What will you do?';
+  }
+}
+
+// ─── Run away ─────────────────────────────────────────────────────────────────
+function runAway() {
+  battleActive = false;
+  prevScreen = 's-battle';
+  showResult(false, false, false, true);
+}
+
+// ─── Result screen ────────────────────────────────────────────────────────────
+function showResult(caught, fainted, isShiny=false, ran=false) {
+  prevScreen = 's-battle';
+  showScreen('s-result');
+
+  const icon = document.getElementById('result-icon');
+  const title = document.getElementById('result-title');
+  const sub = document.getElementById('result-sub');
+  const bonus = document.getElementById('result-bonus');
+  const sprite = document.getElementById('result-sprite');
+  const noBalls = document.getElementById('no-balls-panel');
+
+  sprite.src = wild?.sprite || '';
+  sprite.style.filter = isShiny ? 'drop-shadow(0 0 16px gold)' : `drop-shadow(0 0 12px ${typeColor(wild?.types?.[0]||'normal')}88)`;
+  noBalls.style.display = 'none';
+  bonus.innerHTML = '';
+
+  if (caught) {
+    sfx('levelup');
+    icon.textContent = isShiny ? '✨' : '🎉';
+    icon.style.animation = 'float 2s infinite';
+    title.textContent = isShiny ? 'SHINY CAUGHT!' : 'Gotcha!';
+    title.style.color = isShiny ? '#FFD54F' : '#81C784';
+    const alreadyOwned = state.caught.filter(p=>p.id===wild.id).length > 1;
+    sub.textContent = `${wild.name.toUpperCase()} was ${alreadyOwned?'already in':'added to'} your Pokédex!`;
+    if (isShiny) {
+      bonus.innerHTML = `<div style="background:rgba(255,213,79,.1);border:1px solid rgba(255,213,79,.3);border-radius:8px;padding:8px;font-size:7px;color:#FFD54F">✨ A shiny Pokémon! Incredibly rare!</div>`;
+    }
+  } else if (ran) {
+    icon.textContent = '🌿';
+    icon.style.animation = '';
+    title.textContent = 'Got away!';
+    title.style.color = '#BCAAA4';
+    sub.textContent = 'You ran from the battle safely.';
+  } else if (fainted) {
+    icon.textContent = '💀';
+    icon.style.animation = '';
+    title.textContent = 'It fainted!';
+    title.style.color = '#EF9A9A';
+    sub.textContent = `${wild.name.toUpperCase()} fainted — couldn't catch it this time.`;
+  } else {
+    icon.textContent = state.playerHP <= 0 ? '💨' : '😵';
+    icon.style.animation = '';
+    title.textContent = state.playerHP <= 0 ? 'Blacked out!' : 'It escaped!';
+    title.style.color = '#F48FB1';
+    sub.textContent = `${wild?.name?.toUpperCase() || 'The Pokémon'} got away!`;
+  }
+
+  if (state.balls <= 0) noBalls.style.display = 'block';
+}
+
+// ─── Restock ──────────────────────────────────────────────────────────────────
+function restockBalls() {
+  state.balls = 10;
+  save();
+  toast('Got 10 Poké Balls! 🎒', '#4FC3F7');
+  document.getElementById('no-balls-panel').style.display = 'none';
+}
+
+// ─── Pokédex ──────────────────────────────────────────────────────────────────
+function showDex() {
+  prevScreen = document.querySelector('.screen.active')?.id || 's-title';
+  showScreen('s-dex');
+  renderDex();
+}
+
+function renderDex() {
+  const grid = document.getElementById('dex-grid');
+  const empty = document.getElementById('dex-empty');
+  const search = document.getElementById('dex-search').value.toLowerCase();
+
+  // Deduplicate by id (keep shiny separately)
+  const unique = {};
+  state.caught.forEach(p => {
+    const key = `${p.id}-${p.isShiny?'s':'n'}`;
+    if (!unique[key]) unique[key] = p;
+  });
+  const list = Object.values(unique)
+    .filter(p => !search || p.name.includes(search))
+    .sort((a,b) => a.id - b.id || (a.isShiny?1:-1));
+
+  const totalUnique = new Set(state.caught.map(p=>p.id)).size;
+  const shinyCount = state.caught.filter(p=>p.isShiny).length;
+
+  document.getElementById('dex-count').textContent = totalUnique;
+  document.getElementById('dex-shiny-count').textContent = shinyCount;
+  document.getElementById('title-dex-count').textContent = totalUnique;
+  document.getElementById('dex-progress').style.width = (totalUnique/386*100)+'%';
+
+  if (list.length === 0) {
+    empty.style.display = 'block'; grid.innerHTML = ''; return;
+  }
+  empty.style.display = 'none';
+
+  grid.innerHTML = list.map(p => {
+    const tc = typeColor(p.types[0]);
+    return `<div class="dex-card" style="border-color:${tc}44;background:linear-gradient(135deg,${tc}18,var(--card))">
+      ${p.isShiny?'<div style="font-size:8px;color:#FFD54F">✨</div>':''}
+      <img src="${p.sprite}" alt="${p.name}" loading="lazy">
+      <div style="color:var(--faint);font-size:5px;margin-bottom:2px">#${String(p.id).padStart(3,'0')}</div>
+      <div style="color:var(--text);font-size:6px;text-transform:capitalize;line-height:1.4">${p.name}</div>
+      <div style="display:flex;gap:3px;justify-content:center;margin-top:4px;flex-wrap:wrap">
+        ${p.types.map(t=>`<span class="type-badge" style="background:${typeColor(t)};color:#0d0d1a;font-size:5px">${t}</span>`).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function delay(ms) { return new Promise(r=>setTimeout(r,ms)); }
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+load();
+checkStreak();
+refreshTitle();
+showScreen('s-title');
+</script>
+</body>
+</html>
