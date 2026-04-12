@@ -145,7 +145,7 @@
 </div>
 
 <!-- ══ BATTLE ═════════════════════════════════════════════════════════════ -->
-<div class="screen no-nav" id="s-battle" style="justify-content:center">
+<div class="screen no-nav" id="s-battle">
   <div class="card" style="max-width:430px;width:100%">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
       <div id="b-trainer-label" style="font-size:6px;color:var(--muted)"></div>
@@ -199,14 +199,17 @@
     </div>
     <div style="text-align:right;margin-top:5px;font-size:6px;color:var(--faint)">⚪<span id="b-balls">0</span> 💊<span id="b-potions">0</span></div>
 
-    <!-- ★ BATTLE END PANEL — always at bottom, always in view ★ -->
-    <div id="b-end-panel" style="display:none;margin-top:12px;animation:slideUp .35s ease-out">
-      <div id="b-end-title" style="text-align:center;font-size:11px;margin-bottom:6px"></div>
-      <div id="b-end-summary" style="font-size:6px;color:var(--muted);line-height:2;margin-bottom:12px;text-align:center"></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-        <button class="btn btn-green" style="font-size:8px;padding:13px" onclick="battleGoHome()">🏠 Home</button>
-        <button class="btn btn-blue"  style="font-size:8px;padding:13px" onclick="battleGoHome();setTimeout(startWildBattle,200)">⚔ Again</button>
-      </div>
+  </div>
+</div>
+
+<!-- ★ BATTLE END OVERLAY — fixed to bottom of screen, always visible ★ -->
+<div id="b-end-overlay" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:30;padding:0 12px 12px;pointer-events:none">
+  <div id="b-end-panel" style="background:#131328;border:1px solid rgba(255,255,255,.18);border-radius:16px;padding:16px 14px;max-width:430px;margin:0 auto;pointer-events:all;box-shadow:0 -8px 40px rgba(0,0,0,.7);animation:slideUp .3s ease-out">
+    <div id="b-end-title" style="text-align:center;font-size:12px;margin-bottom:5px"></div>
+    <div id="b-end-summary" style="font-size:6px;color:var(--muted);line-height:2;margin-bottom:12px;text-align:center"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <button class="btn btn-green" style="font-size:8px;padding:14px" onclick="battleGoHome()">🏠 Home</button>
+      <button class="btn btn-blue"  style="font-size:8px;padding:14px" onclick="battleAgain()">⚔ Again</button>
     </div>
   </div>
 </div>
@@ -373,9 +376,12 @@ function checkStreak(){
 let B=null;
 function initBattle(isWild,enemyTeam,trainerName,trainerCoins){
   const firstActive=G.team.findIndex(p=>p.hp>0);
+  // Always hide end overlay when starting a fresh battle
+  const ov=document.getElementById('b-end-overlay');
+  if(ov)ov.style.display='none';
   B={isWild,trainerName,trainerCoins:trainerCoins||0,enemyTeam,refs:G.team,
     playerActive:firstActive,enemyActive:0,phase:'choose',log:[],
-    participants:new Set([firstActive])};  // track who fought for EXP share
+    participants:new Set([firstActive])};
 }
 
 // ── SOUND ─────────────────────────────────────────────────────────────────────
@@ -432,7 +438,15 @@ function goTeam(){showScreen('s-team');renderTeamScreen();}
 function goMart(){showScreen('s-mart');renderMart();}
 function goDex(){showScreen('s-dex');renderDexScreen();}
 function goAchievements(){showScreen('s-achievements');renderAchievements();}
-function battleGoHome(){if(B)B=null;goWorld();}
+function battleGoHome(){
+  document.getElementById('b-end-overlay').style.display='none';
+  if(B)B=null;goWorld();
+}
+function battleAgain(){
+  document.getElementById('b-end-overlay').style.display='none';
+  if(B)B=null;
+  setTimeout(startWildBattle,150);
+}
 function confirmSwitchSlot(){
   saveGame();
   openConfirm('Save & go back to Slot Select?','Go to Slots','#4FC3F7',()=>{showScreen('s-title');renderTitle();});
@@ -580,13 +594,8 @@ function renderBattle(){
   document.getElementById('b-log').textContent=B.log[B.log.length-1]||'';
   document.getElementById('b-balls').textContent=G.balls;
   document.getElementById('b-potions').textContent=G.potions;
-  // ★ END PANEL at the bottom — always in view when battle ends ★
-  const ep2=document.getElementById('b-end-panel');
-  ep2.style.display=ended?'block':'none';
-  if(ended){
-    const sc=document.getElementById('s-battle');
-    setTimeout(()=>sc.scrollTo({top:sc.scrollHeight,behavior:'smooth'}),80);
-  }
+  // ★ FIXED END OVERLAY — always on screen regardless of scroll ★
+  document.getElementById('b-end-overlay').style.display=ended?'block':'none';
   document.getElementById('b-moves').innerHTML=ended?'':pl.moves.map((m,i)=>{
     const tc=TC[m.type]||'#BCAAA4';const eff=getEff(m.type,en.types);
     const eL=eff>=2?'<div style="color:#FFD54F;font-size:5px">▲ Super!</div>':eff===0?'<div style="color:#555;font-size:5px">✗ None</div>':eff<=.5?'<div style="color:#EF9A9A;font-size:5px">▼ Weak</div>':'';
@@ -693,11 +702,12 @@ async function battleWon(){
   if(!G.evolveCount)G.evolveCount=0;
   saveGame();checkAchievements();
   B.phase='ended';
-  // Populate end panel BEFORE renderBattle so it's ready when scrolled into view
   document.getElementById('b-end-title').innerHTML=B.isWild?'🎉 Victory!':'🏆 Trainer Defeated!';
   document.getElementById('b-end-title').style.color=B.isWild?'#81C784':'#FFD54F';
   document.getElementById('b-end-summary').innerHTML=`+${coins}💰 earned${!B.isWild?' · +2⚪ +1💊':''}`;
   renderBattle();
+  // Belt-and-suspenders: force overlay visible after a tick in case renderBattle fires before DOM settles
+  setTimeout(()=>{const o=document.getElementById('b-end-overlay');if(o)o.style.display='block';},120);
 }
 async function battleLost(){
   SFX.lose();
@@ -709,6 +719,7 @@ async function battleLost(){
   document.getElementById('b-end-summary').innerHTML='Team restored to low HP';
   B.log.push('You blacked out... 💀');
   renderBattle();
+  setTimeout(()=>{const o=document.getElementById('b-end-overlay');if(o)o.style.display='block';},120);
 }
 
 // ── SWITCH ────────────────────────────────────────────────────────────────────
@@ -755,6 +766,7 @@ async function tryCatch(){
     document.getElementById('b-end-title').style.color='#81C784';
     document.getElementById('b-end-summary').innerHTML=`${en.nickname||en.name} was caught!`;
     renderBattle();
+    setTimeout(()=>{const o=document.getElementById('b-end-overlay');if(o)o.style.display='block';},120);
   }else{
     SFX.escaped();B.log.push(`${en.name} broke free!`);renderBattle();await delay(700);
     await execMove(en,pickEnemy(en,B.refs[B.playerActive]),B.refs[B.playerActive]);
@@ -768,6 +780,7 @@ async function runAway(){
   document.getElementById('b-end-title').style.color='#BCAAA4';
   document.getElementById('b-end-summary').innerHTML='Escaped safely';
   renderBattle();
+  setTimeout(()=>{const o=document.getElementById('b-end-overlay');if(o)o.style.display='block';},120);
 }
 
 // ── WORLD ─────────────────────────────────────────────────────────────────────
