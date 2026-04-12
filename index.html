@@ -154,7 +154,13 @@
         <span style="color:var(--faint);font-size:8px">vs</span>
         <div id="b-player-dots" style="font-size:9px;letter-spacing:2px"></div>
       </div>
-      <div id="b-time-badge" style="font-size:7px"></div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <div id="b-time-badge" style="font-size:7px"></div>
+        <button id="b-escape-btn" 
+          onclick="battleEscape()"
+          style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:rgba(255,255,255,.5);font-family:var(--font);font-size:6px;padding:4px 8px;cursor:pointer;-webkit-tap-highlight-color:transparent"
+          title="Emergency exit">✕ Exit</button>
+      </div>
     </div>
     <!-- Enemy -->
     <div style="display:flex;gap:10px;margin-bottom:6px;align-items:flex-start">
@@ -447,6 +453,16 @@ function battleAgain(){
   if(B)B=null;
   setTimeout(startWildBattle,150);
 }
+// Always-available escape — confirms first to avoid accidental taps
+function battleEscape(){
+  const ended=B&&B.phase==='ended';
+  if(ended){battleGoHome();return;}
+  // Show a quick confirm only if battle is mid-way
+  if(confirm('Leave this battle?')){
+    document.getElementById('b-end-overlay').style.display='none';
+    if(B)B=null;goWorld();
+  }
+}
 function confirmSwitchSlot(){
   saveGame();
   openConfirm('Save & go back to Slot Select?','Go to Slots','#4FC3F7',()=>{showScreen('s-title');renderTitle();});
@@ -638,31 +654,44 @@ async function playerMove(idx){
 }
 
 async function enemyFaint(){
-  SFX.faint();const en=B.enemyTeam[B.enemyActive];
-  B.log.push(`${en.name} fainted!`);renderBattle();await delay(1100);
-  // EXP Share: active gets full, bench participants get 50%
-  const baseExp=Math.floor(en.level*5*(B.isWild?1:1.5));
-  await giveExp(B.refs[B.playerActive],baseExp,true);
-  for(const idx of B.participants){
-    if(idx!==B.playerActive){
-      const bp=B.refs[idx];
-      if(bp&&bp.hp>0&&bp.level<100){await giveExp(bp,Math.floor(baseExp*.5),false);}
+  try{
+    SFX.faint();const en=B.enemyTeam[B.enemyActive];
+    B.log.push(`${en.name} fainted!`);renderBattle();await delay(1100);
+    const baseExp=Math.floor(en.level*5*(B.isWild?1:1.5));
+    // Give EXP — wrap each in try-catch so a bad evolution never kills the flow
+    try{await giveExp(B.refs[B.playerActive],baseExp,true);}catch(e){console.warn('active exp err',e);}
+    for(const idx of B.participants){
+      if(idx!==B.playerActive){
+        const bp=B.refs[idx];
+        if(bp&&bp.hp>0&&bp.level<100){
+          try{await giveExp(bp,Math.floor(baseExp*.5),false);}catch(e){console.warn('bench exp err',e);}
+        }
+      }
     }
+    B.enemyActive++;
+    if(B.enemyActive<B.enemyTeam.length){
+      B.log.push(`Opponent sent out ${B.enemyTeam[B.enemyActive].name}!`);
+      B.phase='choose';renderBattle();await delay(900);
+    }else await battleWon();
+  }catch(e){
+    // Safety net — if anything above crashes, always show the end panel
+    console.error('enemyFaint crash:',e);
+    await battleWon();
   }
-  B.enemyActive++;
-  if(B.enemyActive<B.enemyTeam.length){
-    B.log.push(`Opponent sent out ${B.enemyTeam[B.enemyActive].name}!`);
-    B.phase='choose';renderBattle();await delay(900);
-  }else await battleWon();
 }
 
 async function playerFaint(){
-  SFX.faint();const pl=B.refs[B.playerActive];pl.hp=0;
-  B.log.push(`${pl.name} fainted!`);renderBattle();await delay(1100);
-  const next=B.refs.findIndex((p,i)=>i!==B.playerActive&&p.hp>0);
-  if(next===-1){await battleLost();return;}
-  B.participants.add(next); // new mon joins participants
-  B.log.push(`Go! ${B.refs[next].name}!`);B.playerActive=next;B.phase='choose';renderBattle();await delay(800);
+  try{
+    SFX.faint();const pl=B.refs[B.playerActive];pl.hp=0;
+    B.log.push(`${pl.name} fainted!`);renderBattle();await delay(1100);
+    const next=B.refs.findIndex((p,i)=>i!==B.playerActive&&p.hp>0);
+    if(next===-1){await battleLost();return;}
+    B.participants.add(next);
+    B.log.push(`Go! ${B.refs[next].name}!`);B.playerActive=next;B.phase='choose';renderBattle();await delay(800);
+  }catch(e){
+    console.error('playerFaint crash:',e);
+    await battleLost();
+  }
 }
 
 async function giveExp(pokemon,amount,isActive=true){
