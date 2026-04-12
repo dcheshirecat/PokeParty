@@ -84,10 +84,11 @@
 
 <!-- Bottom nav -->
 <nav id="bottom-nav">
-  <button class="nav-btn" id="nav-world" onclick="goWorld()"><span class="ni">🗺</span>World</button>
-  <button class="nav-btn" id="nav-team"  onclick="goTeam()"><span class="ni">👜</span>Team</button>
-  <button class="nav-btn" id="nav-mart"  onclick="goMart()"><span class="ni">🏪</span>Mart</button>
-  <button class="nav-btn" id="nav-dex"   onclick="goDex()"><span class="ni">📖</span>Dex</button>
+  <button class="nav-btn" id="nav-world"   onclick="goWorld()"><span class="ni">🗺</span>World</button>
+  <button class="nav-btn" id="nav-team"    onclick="goTeam()"><span class="ni">👜</span>Team</button>
+  <button class="nav-btn" id="nav-mart"    onclick="goMart()"><span class="ni">🏪</span>Mart</button>
+  <button class="nav-btn" id="nav-dex"     onclick="goDex()"><span class="ni">📖</span>Dex</button>
+  <button class="nav-btn" id="nav-achieve" onclick="goAchievements()"><span class="ni">🏅</span>Medals</button>
 </nav>
 
 <div id="app">
@@ -153,7 +154,7 @@
         <span style="color:var(--faint);font-size:8px">vs</span>
         <div id="b-player-dots" style="font-size:9px;letter-spacing:2px"></div>
       </div>
-      <button id="b-home-btn" class="btn btn-ghost btn-sm" style="display:none;color:var(--green);border-color:rgba(129,199,132,.4)" onclick="battleGoHome()">🏠 Home</button>
+      <div id="b-time-badge" style="font-size:7px"></div>
     </div>
     <!-- Enemy -->
     <div style="display:flex;gap:10px;margin-bottom:6px;align-items:flex-start">
@@ -197,6 +198,16 @@
       <button id="b-run-btn"    class="btn btn-ghost btn-sm" onclick="runAway()">💨<br>Run</button>
     </div>
     <div style="text-align:right;margin-top:5px;font-size:6px;color:var(--faint)">⚪<span id="b-balls">0</span> 💊<span id="b-potions">0</span></div>
+
+    <!-- ★ BATTLE END PANEL — always at bottom, always in view ★ -->
+    <div id="b-end-panel" style="display:none;margin-top:12px;animation:slideUp .35s ease-out">
+      <div id="b-end-title" style="text-align:center;font-size:11px;margin-bottom:6px"></div>
+      <div id="b-end-summary" style="font-size:6px;color:var(--muted);line-height:2;margin-bottom:12px;text-align:center"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <button class="btn btn-green" style="font-size:8px;padding:13px" onclick="battleGoHome()">🏠 Home</button>
+        <button class="btn btn-blue"  style="font-size:8px;padding:13px" onclick="battleGoHome();setTimeout(startWildBattle,200)">⚔ Again</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -204,10 +215,19 @@
 <div class="screen" id="s-team">
   <div class="card" style="max-width:430px;width:100%;margin-top:10px">
     <div style="color:var(--gold);font-size:9px;margin-bottom:6px">👜 Team &amp; PC</div>
-    <div style="color:var(--muted);font-size:6px;margin-bottom:10px">↑↓ reorder · ✨ evolve when ready · →PC to store</div>
+    <div style="color:var(--muted);font-size:6px;margin-bottom:10px">↑↓ reorder · ✨ evolve · ✏️ rename · →PC to store</div>
     <div id="team-list"></div>
     <div style="color:var(--muted);font-size:7px;margin:12px 0 6px">📦 PC Box</div>
     <div id="pc-list"></div>
+  </div>
+</div>
+
+<!-- ══ ACHIEVEMENTS ════════════════════════════════════════════════════════ -->
+<div class="screen" id="s-achievements">
+  <div class="card" style="max-width:430px;width:100%;margin-top:10px">
+    <div style="color:var(--gold);font-size:9px;margin-bottom:12px">🏅 Achievements</div>
+    <div id="achieve-list"></div>
+    <button class="btn btn-ghost" style="width:100%;margin-top:12px;font-size:7px" onclick="goWorld()">← Back to World</button>
   </div>
 </div>
 
@@ -397,24 +417,91 @@ function openConfirm(msg,okLabel,okColor,cb){
 function closeConfirm(){document.getElementById('confirm-overlay').classList.remove('open');}
 
 // ── NAVIGATION ────────────────────────────────────────────────────────────────
-const NAV_SCREENS=['s-world','s-team','s-mart','s-dex'];
+const NAV_SCREENS=['s-world','s-team','s-mart','s-dex','s-achievements'];
 function showScreen(id){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   const showNav=NAV_SCREENS.includes(id);
   document.getElementById('bottom-nav').classList.toggle('visible',showNav);
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('at'));
-  const map={'s-world':'nav-world','s-team':'nav-team','s-mart':'nav-mart','s-dex':'nav-dex'};
+  const map={'s-world':'nav-world','s-team':'nav-team','s-mart':'nav-mart','s-dex':'nav-dex','s-achievements':'nav-achieve'};
   if(map[id])document.getElementById(map[id]).classList.add('at');
 }
 function goWorld(){showScreen('s-world');renderWorld();}
 function goTeam(){showScreen('s-team');renderTeamScreen();}
 function goMart(){showScreen('s-mart');renderMart();}
 function goDex(){showScreen('s-dex');renderDexScreen();}
+function goAchievements(){showScreen('s-achievements');renderAchievements();}
 function battleGoHome(){if(B)B=null;goWorld();}
 function confirmSwitchSlot(){
   saveGame();
   openConfirm('Save & go back to Slot Select?','Go to Slots','#4FC3F7',()=>{showScreen('s-title');renderTitle();});
+}
+
+// ── DAY / NIGHT ──────────────────────────────────────────────────────────────
+function isNight(){const h=new Date().getHours();return h>=20||h<6;}
+function timeLabel(){return isNight()?'🌙 Night':'☀️ Day';}
+// Night-weighted encounter pools (Gen I-III IDs)
+const NIGHT_POOL=[92,93,94,167,168,169,198,200,201,202,203,204,205,228,229,261,262,274,275,302,315,353,354,355,356,357,358,359,429];
+const DAY_POOL= [1,4,7,10,16,19,21,23,25,27,35,39,43,46,52,54,56,60,69,74,79,83,84,86,96,100,102,108,111,114,116,118,120,123,124,125,126,127,131,133,137,140,152,155,158,161,163,165,170,172,173,174,175,177,179,183,185,187,190,193,194,209,211,213,215,216,220,222,223,225,226,231,234,238,241,243,244,245,246,252,255,258,263,265,270,276,278,280,283,285,287,290,293,298,299,300,303,304,307,309,311,312,313,314,316,318,320,322,325,327,331,333,339,341,343,345,347,349,351,360,363,366,369,371,374,380,381];
+function getWildId(){
+  if(isNight()&&Math.random()<.4)return NIGHT_POOL[Math.floor(Math.random()*NIGHT_POOL.length)];
+  if(DAY_POOL.length>0&&Math.random()<.6)return DAY_POOL[Math.floor(Math.random()*DAY_POOL.length)];
+  return Math.floor(Math.random()*386)+1;
+}
+
+// ── ACHIEVEMENTS ─────────────────────────────────────────────────────────────
+const ACHIEVEMENTS=[
+  {id:'first_catch',  icon:'🎣', name:'First Catch',     desc:'Catch your first Pokémon',            check:g=>g.dexCaught.length>=1},
+  {id:'ten_caught',   icon:'📖', name:'Collector',        desc:'Catch 10 different Pokémon',          check:g=>g.dexCaught.length>=10},
+  {id:'fifty_caught', icon:'📚', name:'Pokémaniac',       desc:'Catch 50 different Pokémon',          check:g=>g.dexCaught.length>=50},
+  {id:'first_win',    icon:'⚔', name:'First Battle',     desc:'Win your first trainer battle',        check:g=>g.wins>=1},
+  {id:'ten_wins',     icon:'🏆', name:'Champion',         desc:'Win 10 trainer battles',               check:g=>g.wins>=10},
+  {id:'fifty_wins',   icon:'👑', name:'Elite Trainer',    desc:'Win 50 trainer battles',               check:g=>g.wins>=50},
+  {id:'got_rich',     icon:'💰', name:'Millionaire',      desc:'Accumulate 5000 coins',                check:g=>g.coins>=5000},
+  {id:'full_team',    icon:'👜', name:'Full Squad',        desc:'Have 6 Pokémon in your team',          check:g=>g.team.length>=6},
+  {id:'shiny_found',  icon:'✨', name:'Shiny Hunter',     desc:'Encounter a shiny Pokémon',            check:g=>g.team.concat(g.pc||[]).some(p=>p.isShiny)},
+  {id:'streak3',      icon:'🔥', name:'Dedicated',        desc:'Play 3 days in a row',                 check:g=>g.streak>=3},
+  {id:'streak7',      icon:'🌟', name:'True Trainer',     desc:'Play 7 days in a row',                 check:g=>g.streak>=7},
+  {id:'evolved',      icon:'🎊', name:'Evolution!',       desc:'Evolve a Pokémon',                     check:g=>g.evolveCount>=1},
+  {id:'night_catch',  icon:'🌙', name:'Night Owl',        desc:'Catch a Ghost or Dark type',           check:g=>g.team.concat(g.pc||[]).some(p=>p.types&&(p.types.includes('ghost')||p.types.includes('dark')))},
+  {id:'nicknamed',    icon:'✏️', name:'Bonded',           desc:'Give a Pokémon a nickname',            check:g=>g.team.concat(g.pc||[]).some(p=>p.nickname)},
+  {id:'pc_full',      icon:'📦', name:'Hoarder',          desc:'Store 6 Pokémon in the PC',            check:g=>(g.pc||[]).length>=6},
+];
+
+function checkAchievements(){
+  if(!G.unlockedAchievements)G.unlockedAchievements=[];
+  let newOnes=[];
+  for(const a of ACHIEVEMENTS){
+    if(!G.unlockedAchievements.includes(a.id)&&a.check(G)){
+      G.unlockedAchievements.push(a.id);newOnes.push(a);
+    }
+  }
+  if(newOnes.length){
+    saveGame();
+    newOnes.forEach((a,i)=>setTimeout(()=>toast(`🏅 Achievement: ${a.name}!`,'#FFD54F'),i*1200));
+  }
+}
+
+function renderAchievements(){
+  if(!G){document.getElementById('achieve-list').innerHTML='<p style="color:var(--faint);font-size:7px">No save loaded</p>';return;}
+  if(!G.unlockedAchievements)G.unlockedAchievements=[];
+  const unlocked=G.unlockedAchievements;
+  const done=ACHIEVEMENTS.filter(a=>unlocked.includes(a.id));
+  const todo=ACHIEVEMENTS.filter(a=>!unlocked.includes(a.id));
+  document.getElementById('achieve-list').innerHTML=
+    `<div style="font-size:6px;color:var(--muted);margin-bottom:10px">${done.length} / ${ACHIEVEMENTS.length} unlocked</div>`+
+    `<div class="hp-wrap" style="height:5px;margin-bottom:14px"><div style="height:100%;background:linear-gradient(90deg,var(--gold),#FF8F00);border-radius:4px;width:${Math.round(done.length/ACHIEVEMENTS.length*100)}%;transition:width .6s ease"></div></div>`+
+    done.map(a=>`<div style="display:flex;align-items:center;gap:10px;background:rgba(255,213,79,.08);border:1px solid rgba(255,213,79,.25);border-radius:10px;padding:10px;margin-bottom:7px">
+      <div style="font-size:22px;flex-shrink:0">${a.icon}</div>
+      <div><div style="font-size:7px;color:var(--gold)">${a.name}</div><div style="font-size:6px;color:var(--muted);margin-top:2px">${a.desc}</div></div>
+      <div style="margin-left:auto;font-size:10px">✅</div>
+    </div>`).join('')+
+    (todo.length?'<div style="color:var(--faint);font-size:6px;margin:10px 0 8px">Locked:</div>'+
+    todo.map(a=>`<div style="display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:10px;margin-bottom:7px;opacity:.55">
+      <div style="font-size:22px;flex-shrink:0;filter:grayscale(1)">🔒</div>
+      <div><div style="font-size:7px;color:var(--muted)">${a.name}</div><div style="font-size:6px;color:var(--faint);margin-top:2px">${a.desc}</div></div>
+    </div>`).join(''):'');
 }
 
 // ── TITLE & SAVE SLOTS ────────────────────────────────────────────────────────
@@ -467,7 +554,7 @@ function renderBattle(){
   const dis=B.phase==='animating'||B.phase==='ended';
   const ended=B.phase==='ended';
   const ep=Math.max(0,Math.round(en.hp/en.maxHp*100));
-  document.getElementById('b-enemy-name').textContent=en.name+(en.isShiny?' ✨':'');
+  document.getElementById('b-enemy-name').textContent=(en.nickname||en.name)+(en.isShiny?' ✨':'');
   document.getElementById('b-enemy-level').textContent='Lv.'+en.level;
   document.getElementById('b-enemy-types').innerHTML=en.types.map(typeTag).join(' ');
   document.getElementById('b-enemy-hp-text').textContent=`HP ${Math.max(0,en.hp)} / ${en.maxHp}`;
@@ -475,7 +562,7 @@ function renderBattle(){
   const esp=document.getElementById('b-enemy-sprite');esp.src=en.sprite;esp.className=en.isShiny?'shiny-anim':'floating';
   document.getElementById('b-enemy-status').textContent=stIcon(en.status);
   const pp=Math.max(0,Math.round(pl.hp/pl.maxHp*100));
-  document.getElementById('b-player-name').textContent=pl.name+(pl.isShiny?' ✨':'');
+  document.getElementById('b-player-name').textContent=(pl.nickname||pl.name)+(pl.isShiny?' ✨':'');
   document.getElementById('b-player-level').textContent='Lv.'+pl.level;
   document.getElementById('b-player-types').innerHTML=pl.types.map(typeTag).join(' ');
   document.getElementById('b-player-hp-text').textContent=`HP ${Math.max(0,pl.hp)} / ${pl.maxHp}`;
@@ -484,25 +571,32 @@ function renderBattle(){
   document.getElementById('b-player-status').textContent=stIcon(pl.status);
   const expRange=expForLv(pl.level+1)-expForLv(pl.level);
   document.getElementById('b-exp-bar').style.width=Math.min(100,Math.round((pl.exp-expForLv(pl.level))/expRange*100))+'%';
-  // EXP share label: show participating bench members
   const benchParts=Array.from(B.participants).filter(i=>i!==B.playerActive&&B.refs[i]?.hp>0);
-  document.getElementById('b-exp-share-label').textContent=benchParts.length?`📡 EXP sharing with ${benchParts.map(i=>B.refs[i].name).join(', ')}`:'' ;
+  document.getElementById('b-exp-share-label').textContent=benchParts.length?`📡 sharing EXP: ${benchParts.map(i=>B.refs[i].nickname||B.refs[i].name).join(', ')}`:'' ;
   document.getElementById('b-enemy-dots').innerHTML=B.enemyTeam.map(p=>`<span style="color:${p.hp>0?'#81C784':'#555'}">●</span>`).join('');
   document.getElementById('b-player-dots').innerHTML=B.refs.map(p=>`<span style="color:${p.hp>0?'#81C784':'#555'}">●</span>`).join('');
   document.getElementById('b-trainer-label').textContent=B.isWild?'⚡ Wild Battle':`⚔ ${B.trainerName}`;
+  document.getElementById('b-time-badge').textContent=timeLabel();
   document.getElementById('b-log').textContent=B.log[B.log.length-1]||'';
   document.getElementById('b-balls').textContent=G.balls;
   document.getElementById('b-potions').textContent=G.potions;
-  // Home button — always show when ended so user can always get back
-  document.getElementById('b-home-btn').style.display=ended?'flex':'none';
-  document.getElementById('b-moves').innerHTML=pl.moves.map((m,i)=>{
+  // ★ END PANEL at the bottom — always in view when battle ends ★
+  const ep2=document.getElementById('b-end-panel');
+  ep2.style.display=ended?'block':'none';
+  if(ended){
+    const sc=document.getElementById('s-battle');
+    setTimeout(()=>sc.scrollTo({top:sc.scrollHeight,behavior:'smooth'}),80);
+  }
+  document.getElementById('b-moves').innerHTML=ended?'':pl.moves.map((m,i)=>{
     const tc=TC[m.type]||'#BCAAA4';const eff=getEff(m.type,en.types);
     const eL=eff>=2?'<div style="color:#FFD54F;font-size:5px">▲ Super!</div>':eff===0?'<div style="color:#555;font-size:5px">✗ None</div>':eff<=.5?'<div style="color:#EF9A9A;font-size:5px">▼ Weak</div>':'';
     return`<button class="btn" style="background:${tc}1a;border:1px solid ${tc}44;color:${tc};padding:9px 6px;font-size:7px;border-radius:10px;text-align:left;line-height:1.7" onclick="playerMove(${i})" ${dis||m.pp<=0?'disabled':''}><div style="text-transform:capitalize">${m.name}</div><div style="font-size:5px;opacity:.65">${m.type}·${m.power||'—'}·PP ${m.pp}/${m.maxPP}</div>${eL}</button>`;
   }).join('');
   ['b-switch-btn','b-item-btn','b-catch-btn','b-run-btn'].forEach(id=>document.getElementById(id).disabled=dis);
-  document.getElementById('b-catch-btn').style.display=B.isWild&&!ended?'block':'none';
-  document.getElementById('b-run-btn').style.display=B.isWild&&!ended?'block':'none';
+  const actRow=document.getElementById('b-switch-btn').parentElement;
+  if(actRow)actRow.style.display=ended?'none':'grid';
+  document.getElementById('b-catch-btn').style.display=B.isWild?'':'none';
+  document.getElementById('b-run-btn').style.display=B.isWild?'':'none';
 }
 
 // ── BATTLE LOGIC ──────────────────────────────────────────────────────────────
@@ -587,25 +681,34 @@ async function doEvolveBattle(pokemon){
   try{
     await applyEvolutionData(pokemon);
     B.log.push(`🎊 ${oldName} evolved into ${pokemon.name}!`);
-    sp.style.animation='';renderBattle();await delay(2000);saveGame();
+    if(!G.evolveCount)G.evolveCount=0;G.evolveCount++;
+    sp.style.animation='';renderBattle();await delay(2000);saveGame();checkAchievements();
   }catch(e){sp.style.animation='';B.log.push('Evolution failed.');}
 }
 
-// Battle end — NO auto-navigate. Home button appears, user taps it.
 async function battleWon(){
   SFX.win();
   const coins=B.isWild?Math.floor(50+Math.random()*60):B.trainerCoins;
   G.coins+=coins;if(!B.isWild){G.wins++;G.balls+=2;G.potions+=1;}
-  saveGame();
-  B.log.push(B.isWild?`You won! 🎉 +${coins}💰`:`Defeated ${B.trainerName}! 🏆 +${coins}💰`);
-  B.phase='ended';renderBattle();
-  // Home button is now visible — user taps when ready
+  if(!G.evolveCount)G.evolveCount=0;
+  saveGame();checkAchievements();
+  B.phase='ended';
+  // Populate end panel BEFORE renderBattle so it's ready when scrolled into view
+  document.getElementById('b-end-title').innerHTML=B.isWild?'🎉 Victory!':'🏆 Trainer Defeated!';
+  document.getElementById('b-end-title').style.color=B.isWild?'#81C784':'#FFD54F';
+  document.getElementById('b-end-summary').innerHTML=`+${coins}💰 earned${!B.isWild?' · +2⚪ +1💊':''}`;
+  renderBattle();
 }
 async function battleLost(){
-  SFX.lose();B.log.push('You blacked out... 💀');B.phase='ended';renderBattle();
+  SFX.lose();
   G.team.forEach(p=>{p.hp=Math.max(1,Math.floor(p.maxHp*.1));p.status=null;});
-  saveGame();
-  // Home button is visible — user taps when ready
+  saveGame();checkAchievements();
+  B.phase='ended';
+  document.getElementById('b-end-title').innerHTML='😵 Blacked Out...';
+  document.getElementById('b-end-title').style.color='#EF9A9A';
+  document.getElementById('b-end-summary').innerHTML='Team restored to low HP';
+  B.log.push('You blacked out... 💀');
+  renderBattle();
 }
 
 // ── SWITCH ────────────────────────────────────────────────────────────────────
@@ -647,14 +750,25 @@ async function tryCatch(){
     if(!G.dexSeen.includes(en.id))G.dexSeen.push(en.id);
     if(G.team.length<6){G.team.push(en);toast(`${en.name} joined your team!`,'#81C784');}
     else{G.pc.push(en);toast(`${en.name} sent to PC!`,'#4FC3F7');}
-    saveGame();B.phase='ended';renderBattle();
+    saveGame();B.phase='ended';
+    document.getElementById('b-end-title').innerHTML=`✨ Gotcha!`;
+    document.getElementById('b-end-title').style.color='#81C784';
+    document.getElementById('b-end-summary').innerHTML=`${en.nickname||en.name} was caught!`;
+    renderBattle();
   }else{
     SFX.escaped();B.log.push(`${en.name} broke free!`);renderBattle();await delay(700);
     await execMove(en,pickEnemy(en,B.refs[B.playerActive]),B.refs[B.playerActive]);
     if(B.refs[B.playerActive].hp<=0){await playerFaint();return;}B.phase='choose';renderBattle();
   }
 }
-async function runAway(){if(!B.isWild||B.phase!=='choose')return;B.log.push('Got away safely!');B.phase='ended';renderBattle();}
+async function runAway(){
+  if(!B.isWild||B.phase!=='choose')return;
+  B.log.push('Got away safely!');B.phase='ended';
+  document.getElementById('b-end-title').innerHTML='💨 Got Away!';
+  document.getElementById('b-end-title').style.color='#BCAAA4';
+  document.getElementById('b-end-summary').innerHTML='Escaped safely';
+  renderBattle();
+}
 
 // ── WORLD ─────────────────────────────────────────────────────────────────────
 function renderWorld(){
@@ -674,11 +788,12 @@ async function startWildBattle(){
   setLoading(true);
   try{
     const avgLv=Math.round(G.team.reduce((s,p)=>s+p.level,0)/G.team.length);
-    const wildId=Math.floor(Math.random()*386)+1;const isShiny=Math.random()<1/512;
+    const wildId=getWildId();const isShiny=Math.random()<1/512;
     const enemy=await buildInst(wildId,Math.max(2,avgLv+Math.floor(Math.random()*7)-3),isShiny);
     if(!G.dexSeen.includes(wildId))G.dexSeen.push(wildId);
     initBattle(true,[enemy],null,0);
-    B.log=[`A wild ${enemy.name.toUpperCase()} appeared!${isShiny?' ✨ It\'s shiny!':''}`];
+    const nightMsg=isNight()&&(enemy.types.includes('ghost')||enemy.types.includes('dark'))?' 🌙 A nocturnal Pokémon!':'';
+    B.log=[`A wild ${enemy.name.toUpperCase()} appeared!${isShiny?' ✨ It\'s shiny!':''}${nightMsg}`];
     if(isShiny)SFX.shiny();else SFX.encounter();
     setLoading(false);showScreen('s-battle');renderBattle();
   }catch(e){setLoading(false);toast('Connection error — try again','#FF6B35');}
@@ -715,10 +830,19 @@ async function pickStarter(id){
 }
 
 // ── TEAM SCREEN ───────────────────────────────────────────────────────────────
+function nicknamePokemon(list,i){
+  const p=list[i];
+  const nn=prompt(`Nickname for ${p.name} (leave blank to remove):`,p.nickname||'');
+  if(nn===null)return;
+  p.nickname=nn.trim().slice(0,12)||null;
+  saveGame();checkAchievements();renderTeamScreen();
+  toast(p.nickname?`Named "${p.nickname}"! 💛`:'Nickname removed','#FFD54F');
+}
 function renderTeamScreen(){
   function teamCard(p,i){
     const pct=Math.max(0,Math.round(p.hp/p.maxHp*100));const tc=TC[p.types[0]]||'#BCAAA4';
     const canEvolve=p.evolvesTo&&p.level>=p.evolvesAtLevel;
+    const dn=p.nickname||p.name;
     return`<div style="background:${tc}12;border:1px solid ${tc}33;border-radius:12px;padding:10px;margin-bottom:8px">
       <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
         <div style="display:flex;flex-direction:column;gap:3px;flex-shrink:0">
@@ -727,20 +851,23 @@ function renderTeamScreen(){
         </div>
         <img src="${p.sprite}" style="width:48px;height:48px;object-fit:contain;flex-shrink:0">
         <div style="flex:1;min-width:0">
-          <div style="font-size:7px;color:#fff;text-transform:capitalize">${p.name}${p.isShiny?' ✨':''} <span style="color:#888;font-size:6px">Lv.${p.level}</span> ${stIcon(p.status)}</div>
+          <div style="font-size:7px;color:#fff;text-transform:capitalize">${dn}${p.isShiny?' ✨':''} <span style="color:#888;font-size:6px">Lv.${p.level}</span> ${stIcon(p.status)}</div>
+          ${p.nickname?`<div style="font-size:5px;color:var(--faint);text-transform:capitalize">(${p.name})</div>`:''}
           <div style="font-size:5px;color:var(--muted);margin:2px 0">HP ${Math.max(0,p.hp)}/${p.maxHp}</div>
           <div class="hp-wrap"><div class="hp-bar" style="width:${pct}%;background:${hpCol(pct)}"></div></div>
           <div style="font-size:5px;color:var(--faint);margin-top:2px">EXP ${p.exp}/${expForLv(p.level+1)}</div>
-          ${canEvolve?`<div style="font-size:5px;color:var(--gold);margin-top:2px;animation:spin 2s linear infinite;display:inline-block">✨</div> <span style="font-size:5px;color:var(--gold)">Ready to evolve!</span>`:(p.evolvesTo?`<div style="font-size:5px;color:var(--faint);margin-top:2px">Evolves Lv.${p.evolvesAtLevel}</div>`:'')}
+          ${canEvolve?`<span style="font-size:5px;color:var(--gold)">✨ Ready to evolve!</span>`:(p.evolvesTo?`<div style="font-size:5px;color:var(--faint);margin-top:2px">Evolves Lv.${p.evolvesAtLevel}</div>`:'')}
         </div>
-        <button class="btn btn-ghost btn-sm" onclick="moveToPC(${i})" style="flex-shrink:0">→PC</button>
+        <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">
+          <button class="btn btn-ghost btn-sm" onclick="moveToPC(${i})">→PC</button>
+          <button class="btn btn-ghost btn-sm" style="font-size:5px;padding:5px 8px" onclick="nicknamePokemon(G.team,${i})">✏️</button>
+        </div>
       </div>
-      ${canEvolve?`<button class="btn btn-gold" style="width:100%;font-size:7px;margin-bottom:6px" onclick="manualEvolve(${i})">✨ Evolve ${p.name}!</button>`:''}
+      ${canEvolve?`<button class="btn btn-gold" style="width:100%;font-size:7px;margin-bottom:6px" onclick="manualEvolve(${i})">✨ Evolve ${dn}!</button>`:''}
       <div style="display:flex;flex-wrap:wrap;gap:4px">
         ${p.moves.map(m=>`<span style="background:${TC[m.type]||'#888'}22;border:1px solid ${TC[m.type]||'#888'}33;color:${TC[m.type]||'#888'};font-size:5px;padding:2px 6px;border-radius:6px;text-transform:capitalize">${m.name} ${m.pp}/${m.maxPP}</span>`).join('')}
       </div>
-    </div>`;
-  }
+    </div>`;}
   function pcCard(p,i){const tc=TC[p.types[0]]||'#BCAAA4';
     return`<div style="background:${tc}0d;border:1px solid ${tc}22;border-radius:10px;padding:8px;margin-bottom:6px;display:flex;align-items:center;gap:8px">
       <img src="${p.sprite}" style="width:40px;height:40px;object-fit:contain">
@@ -767,7 +894,8 @@ async function manualEvolve(teamIdx){
   try{
     const oldName=p.name;SFX.evolveOob();
     await applyEvolutionData(p);
-    saveGame();setLoading(false);
+    if(!G.evolveCount)G.evolveCount=0;G.evolveCount++;
+    saveGame();checkAchievements();setLoading(false);
     toast(`🎊 ${oldName} evolved into ${p.name}!`,'#FFD54F');
     renderTeamScreen();
   }catch(e){setLoading(false);toast('Evolution failed — try again','#FF6B35');}
