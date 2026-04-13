@@ -1203,7 +1203,7 @@ async function selectWonderTrade(src,idx){
     document.getElementById('wonder-result-sprite').src=_wonderPokemon.sprite;
     document.getElementById('wonder-result-name').textContent=`${_wonderPokemon.name} · Lv.${_wonderPokemon.level}`;
     document.getElementById('wonder-result-types').innerHTML=_wonderPokemon.types.map(typeTag).join(' ');
-    document.getElementById('wonder-result-shiny').textContent=isShiny?'✨ It's shiny! Incredibly rare!':'';
+    document.getElementById('wonder-result-shiny').textContent=isShiny?'✨ It/'s shiny! Incredibly rare!':'';
     if(isShiny)SFX.shiny();else SFX.levelup();
     G.wonderTradeCount=(G.wonderTradeCount||0)+1;
     if(!G.dexSeen.includes(receivedId))G.dexSeen.push(receivedId);
