@@ -142,7 +142,10 @@
     <button class="btn btn-ghost" style="width:100%;font-size:6px;margin-bottom:6px" onclick="healTeam()">💊 Heal Entire Team</button>
     <button class="btn btn-gold" style="width:100%;font-size:7px;padding:11px" onclick="goGyms()">🏟 Gym Challenge <span id="world-badge-strip"></span></button>
     <div style="text-align:center;margin-top:10px">
-      <button class="btn btn-ghost btn-sm" style="font-size:5px;color:var(--faint)" onclick="confirmSwitchSlot()">💾 Slot <span id="world-slot">1</span> · Save &amp; Slots</button>
+      <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+        <button class="btn btn-ghost btn-sm" style="font-size:5px;color:var(--faint)" onclick="confirmSwitchSlot()">💾 Slot <span id="world-slot">1</span> · Save &amp; Slots</button>
+        <button class="btn btn-ghost btn-sm" style="font-size:5px;color:var(--gold)" onclick="goSpecial()"><span id="world-quest-status">📋 Quests</span></button>
+      </div>
     </div>
   </div>
 </div>
@@ -164,6 +167,11 @@
           style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:rgba(255,255,255,.5);font-family:var(--font);font-size:6px;padding:4px 8px;cursor:pointer;-webkit-tap-highlight-color:transparent"
           title="Emergency exit">✕ Exit</button>
       </div>
+    </div>
+    <!-- Trainer portrait (trainer battles only) -->
+    <div id="b-trainer-portrait" style="display:none;text-align:center;margin-bottom:8px;animation:slideUp .3s ease-out">
+      <img id="b-trainer-img" src="" alt="" style="height:72px;object-fit:contain;image-rendering:auto;filter:drop-shadow(0 2px 8px rgba(0,0,0,.5))">
+      <div id="b-trainer-quote" style="font-size:6px;color:var(--muted);margin-top:4px;line-height:1.8;font-style:italic"></div>
     </div>
     <!-- Enemy -->
     <div style="display:flex;gap:10px;margin-bottom:6px;align-items:flex-start">
@@ -323,6 +331,31 @@
       <div id="daycare-egg-area" style="margin-bottom:10px"></div>
       <div id="daycare-steps-area"></div>
     </div>
+
+    <!-- Daily Quests -->
+    <div style="background:linear-gradient(135deg,rgba(255,213,79,.07),rgba(255,107,53,.05));border:1px solid rgba(255,213,79,.2);border-radius:14px;padding:14px;margin-top:14px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+        <div style="font-size:28px">📋</div>
+        <div>
+          <div style="font-size:8px;color:var(--gold);margin-bottom:3px">Daily Quests</div>
+          <div style="font-size:6px;color:var(--muted)">3 tasks per day · resets at midnight</div>
+        </div>
+      </div>
+      <div id="quest-list"></div>
+    </div>
+
+    <!-- Mystery Gift -->
+    <div style="background:linear-gradient(135deg,rgba(206,147,216,.08),rgba(121,134,203,.06));border:1px solid rgba(206,147,216,.2);border-radius:14px;padding:14px;margin-top:14px;margin-bottom:4px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+        <div style="font-size:28px">🎁</div>
+        <div>
+          <div style="font-size:8px;color:#CE93D8;margin-bottom:3px">Mystery Gift</div>
+          <div style="font-size:6px;color:var(--muted)">One free gift per day — you never know what you'll get!</div>
+        </div>
+      </div>
+      <div id="mystery-gift-area"></div>
+    </div>
+
   </div>
 </div>
 
@@ -353,38 +386,38 @@ const EFF={normal:{rock:.5,ghost:0,steel:.5},fire:{fire:.5,water:.5,grass:2,ice:
 const TC={fire:'#FF6B35',water:'#4FC3F7',grass:'#81C784',electric:'#FFD54F',psychic:'#F48FB1',ice:'#80DEEA',dragon:'#7986CB',dark:'#8D6E63',fairy:'#F8BBD9',normal:'#BCAAA4',fighting:'#EF9A9A',flying:'#90CAF9',poison:'#CE93D8',ground:'#FFCC80',rock:'#A5D6A7',bug:'#DCEDC8',ghost:'#9575CD',steel:'#CFD8DC'};
 const STARTERS=[1,4,7,152,155,158,252,255,258];
 const TRAINERS=[
-  {name:'Bug Catcher Joey',emoji:'🧒',minW:0, team:[{id:10,lv:5},{id:13,lv:6}],coins:60},
-  {name:'Lass Amy',        emoji:'👧',minW:0, team:[{id:35,lv:6},{id:39,lv:7}],coins:80},
-  {name:'Youngster Max',   emoji:'👦',minW:0, team:[{id:19,lv:8},{id:21,lv:9}],coins:90},
-  {name:'Hiker Bob',       emoji:'⛰️',minW:3, team:[{id:74,lv:13},{id:95,lv:14}],coins:150},
-  {name:'Swimmer Lily',    emoji:'🏊',minW:3, team:[{id:54,lv:13},{id:60,lv:14},{id:86,lv:12}],coins:160},
-  {name:'Rocket Grunt',    emoji:'😈',minW:6, team:[{id:23,lv:20},{id:41,lv:20},{id:109,lv:22}],coins:220},
-  {name:'Sailor Mike',     emoji:'⚓',minW:6, team:[{id:72,lv:22},{id:98,lv:23}],coins:200},
-  {name:'Psychic Nina',    emoji:'🔮',minW:9, team:[{id:64,lv:27},{id:79,lv:28},{id:102,lv:26}],coins:300},
-  {name:'Black Belt Jin',  emoji:'🥋',minW:9, team:[{id:66,lv:28},{id:107,lv:30}],coins:280},
-  {name:'Ace Trainer Rex', emoji:'🌟',minW:12,team:[{id:59,lv:36},{id:130,lv:37},{id:143,lv:34}],coins:400},
-  {name:'Rival Gary',      emoji:'🤺',minW:15,team:[{id:18,lv:40},{id:65,lv:42},{id:112,lv:41},{id:149,lv:40}],coins:500},
-  {name:'Elite Four Nina', emoji:'👑',minW:18,team:[{id:78,lv:48},{id:110,lv:48},{id:121,lv:50},{id:149,lv:52}],coins:700},
-  {name:'Champion RED',    emoji:'🏆',minW:22,team:[{id:25,lv:81},{id:103,lv:77},{id:112,lv:77},{id:59,lv:77},{id:131,lv:80},{id:143,lv:82}],coins:1200},
+  {name:'Bug Catcher Joey',sprite:'https://play.pokemonshowdown.com/sprites/trainers/youngster.png',emoji:'🧒',minW:0, team:[{id:10,lv:5},{id:13,lv:6}],coins:60},
+  {name:'Lass Amy',sprite:'https://play.pokemonshowdown.com/sprites/trainers/lass.png',        emoji:'👧',minW:0, team:[{id:35,lv:6},{id:39,lv:7}],coins:80},
+  {name:'Youngster Max',sprite:'https://play.pokemonshowdown.com/sprites/trainers/youngster.png',   emoji:'👦',minW:0, team:[{id:19,lv:8},{id:21,lv:9}],coins:90},
+  {name:'Hiker Bob',sprite:'https://play.pokemonshowdown.com/sprites/trainers/hiker.png',       emoji:'⛰️',minW:3, team:[{id:74,lv:13},{id:95,lv:14}],coins:150},
+  {name:'Swimmer Lily',sprite:'https://play.pokemonshowdown.com/sprites/trainers/swimmerf.png',    emoji:'🏊',minW:3, team:[{id:54,lv:13},{id:60,lv:14},{id:86,lv:12}],coins:160},
+  {name:'Rocket Grunt',sprite:'https://play.pokemonshowdown.com/sprites/trainers/teamrocket-m.png',    emoji:'😈',minW:6, team:[{id:23,lv:20},{id:41,lv:20},{id:109,lv:22}],coins:220},
+  {name:'Sailor Mike',sprite:'https://play.pokemonshowdown.com/sprites/trainers/sailor.png',     emoji:'⚓',minW:6, team:[{id:72,lv:22},{id:98,lv:23}],coins:200},
+  {name:'Psychic Nina',sprite:'https://play.pokemonshowdown.com/sprites/trainers/psychic-f.png',    emoji:'🔮',minW:9, team:[{id:64,lv:27},{id:79,lv:28},{id:102,lv:26}],coins:300},
+  {name:'Black Belt Jin',sprite:'https://play.pokemonshowdown.com/sprites/trainers/blackbelt.png',  emoji:'🥋',minW:9, team:[{id:66,lv:28},{id:107,lv:30}],coins:280},
+  {name:'Ace Trainer Rex',sprite:'https://play.pokemonshowdown.com/sprites/trainers/acetrainer-m.png', emoji:'🌟',minW:12,team:[{id:59,lv:36},{id:130,lv:37},{id:143,lv:34}],coins:400},
+  {name:'Rival Gary',sprite:'https://play.pokemonshowdown.com/sprites/trainers/rival-gary.png',      emoji:'🤺',minW:15,team:[{id:18,lv:40},{id:65,lv:42},{id:112,lv:41},{id:149,lv:40}],coins:500},
+  {name:'Elite Four Nina',sprite:'https://play.pokemonshowdown.com/sprites/trainers/lorelei.png', emoji:'👑',minW:18,team:[{id:78,lv:48},{id:110,lv:48},{id:121,lv:50},{id:149,lv:52}],coins:700},
+  {name:'Champion RED',sprite:'https://play.pokemonshowdown.com/sprites/trainers/red.png',    emoji:'🏆',minW:22,team:[{id:25,lv:81},{id:103,lv:77},{id:112,lv:77},{id:59,lv:77},{id:131,lv:80},{id:143,lv:82}],coins:1200},
 ];
 
 // ── GYM DATA ─────────────────────────────────────────────────────────────────
 const GYMS=[
-  {id:'boulder',badge:'🪨',name:'Pewter City Gym',  leader:'Brock',    type:'rock',    coins:350,  minBadges:0,
+  {id:'boulder',badge:'🪨',name:'Pewter City Gym',  leader:'Brock',sprite:'https://play.pokemonshowdown.com/sprites/trainers/brock.png',    type:'rock',    coins:350,  minBadges:0,
    team:[{id:74,lv:12},{id:95,lv:14}]},
-  {id:'cascade',badge:'💧',name:'Cerulean City Gym',leader:'Misty',    type:'water',   coins:500,  minBadges:1,
+  {id:'cascade',badge:'💧',name:'Cerulean City Gym',leader:'Misty',sprite:'https://play.pokemonshowdown.com/sprites/trainers/misty.png',    type:'water',   coins:500,  minBadges:1,
    team:[{id:120,lv:18},{id:121,lv:21}]},
-  {id:'thunder',badge:'⚡',name:'Vermilion City Gym',leader:'Lt. Surge',type:'electric',coins:650,  minBadges:2,
+  {id:'thunder',badge:'⚡',name:'Vermilion City Gym',leader:'Lt. Surge',sprite:'https://play.pokemonshowdown.com/sprites/trainers/lt.surge.png',type:'electric',coins:650,  minBadges:2,
    team:[{id:100,lv:21},{id:25,lv:18},{id:26,lv:24}]},
-  {id:'rainbow',badge:'🌈',name:'Celadon City Gym', leader:'Erika',    type:'grass',   coins:800,  minBadges:3,
+  {id:'rainbow',badge:'🌈',name:'Celadon City Gym', leader:'Erika',sprite:'https://play.pokemonshowdown.com/sprites/trainers/erika.png',    type:'grass',   coins:800,  minBadges:3,
    team:[{id:71,lv:29},{id:114,lv:24},{id:45,lv:29}]},
-  {id:'soul',   badge:'☠️', name:'Fuchsia City Gym', leader:'Koga',    type:'poison',  coins:950,  minBadges:4,
+  {id:'soul',   badge:'☠️', name:'Fuchsia City Gym', leader:'Koga',sprite:'https://play.pokemonshowdown.com/sprites/trainers/koga.png',    type:'poison',  coins:950,  minBadges:4,
    team:[{id:109,lv:37},{id:88,lv:39},{id:110,lv:43}]},
-  {id:'marsh',  badge:'🔮',name:'Saffron City Gym',  leader:'Sabrina', type:'psychic', coins:1100, minBadges:5,
+  {id:'marsh',  badge:'🔮',name:'Saffron City Gym',  leader:'Sabrina',sprite:'https://play.pokemonshowdown.com/sprites/trainers/sabrina.png', type:'psychic', coins:1100, minBadges:5,
    team:[{id:64,lv:38},{id:122,lv:37},{id:65,lv:43}]},
-  {id:'volcano',badge:'🌋',name:'Cinnabar Island Gym',leader:'Blaine',  type:'fire',    coins:1300, minBadges:6,
+  {id:'volcano',badge:'🌋',name:'Cinnabar Island Gym',leader:'Blaine',sprite:'https://play.pokemonshowdown.com/sprites/trainers/blaine.png',  type:'fire',    coins:1300, minBadges:6,
    team:[{id:58,lv:42},{id:77,lv:40},{id:78,lv:42},{id:59,lv:47}]},
-  {id:'earth',  badge:'🌍',name:'Viridian City Gym', leader:'Giovanni',type:'ground',  coins:1600, minBadges:7,
+  {id:'earth',  badge:'🌍',name:'Viridian City Gym', leader:'Giovanni',sprite:'https://play.pokemonshowdown.com/sprites/trainers/giovanni.png',type:'ground',  coins:1600, minBadges:7,
    team:[{id:111,lv:45},{id:51,lv:42},{id:31,lv:44},{id:32,lv:45},{id:112,lv:50}]},
 ];
 const MART_ITEMS=[
@@ -458,7 +491,7 @@ let currentSlot=0;
 let G=null;
 
 function getSK(slot){return SK_BASE+slot;}
-function newGame(){G={team:[],pc:[],dexSeen:[],dexCaught:[],wins:0,balls:10,potions:3,revives:0,coins:0,streak:1,lastDate:new Date().toDateString(),daycare:[null,null],daycareSteps:0,egg:null,eggSteps:0,wonderTradeCount:0,evolveCount:0,badges:[],unlockedAchievements:[]};}
+function newGame(){G={team:[],pc:[],dexSeen:[],dexCaught:[],wins:0,balls:10,potions:3,revives:0,coins:0,streak:1,lastDate:new Date().toDateString(),daycare:[null,null],daycareSteps:0,egg:null,eggSteps:0,wonderTradeCount:0,evolveCount:0,badges:[],unlockedAchievements:[],questDate:null,quests:[],questsCompleted:[],giftDate:null,battleWinsToday:0,catchesToday:0,trainerWinsToday:0};}
 function saveGame(){try{localStorage.setItem(getSK(currentSlot),JSON.stringify(G));}catch(e){}}
 function loadSlot(slot){
   try{const d=JSON.parse(localStorage.getItem(getSK(slot))||'null');
@@ -641,6 +674,8 @@ const ACHIEVEMENTS=[
   {id:'first_badge',  icon:'🪨', name:'Badge Collector', desc:'Earn your first Gym Badge',             check:g=>(g.badges||[]).length>=1},
   {id:'four_badges',  icon:'🌈', name:'Halfway There',   desc:'Earn 4 Gym Badges',                     check:g=>(g.badges||[]).length>=4},
   {id:'all_badges',   icon:'🌟', name:'Gym Champion',    desc:'Collect all 8 Gym Badges!',             check:g=>(g.badges||[]).length>=8},
+  {id:'gift_claimed',  icon:'🎁', name:'Gift Receiver',   desc:'Claim your first Mystery Gift',         check:g=>!!g.giftDate},
+  {id:'quests_done',   icon:'📋', name:'Quest Master',    desc:'Complete all 3 daily quests in one day',check:g=>(g.quests||[]).every(q=>q.done)},
 ];
 
 function checkAchievements(){
@@ -750,6 +785,15 @@ function renderBattle(){
   document.getElementById('b-enemy-dots').innerHTML=B.enemyTeam.map(p=>`<span style="color:${p.hp>0?'#81C784':'#555'}">●</span>`).join('');
   document.getElementById('b-player-dots').innerHTML=B.refs.map(p=>`<span style="color:${p.hp>0?'#81C784':'#555'}">●</span>`).join('');
   document.getElementById('b-trainer-label').textContent=B.isWild?'⚡ Wild Battle':`⚔ ${B.trainerName}`;
+  // Trainer portrait
+  const portrait=document.getElementById('b-trainer-portrait');
+  const tImg=document.getElementById('b-trainer-img');
+  const tQuote=document.getElementById('b-trainer-quote');
+  if(!B.isWild&&B.trainerSprite&&!ended){
+    portrait.style.display='block';
+    tImg.src=B.trainerSprite;
+    tQuote.textContent=B.trainerQuote||'';
+  }else{portrait.style.display='none';}
   document.getElementById('b-time-badge').textContent=timeLabel();
   document.getElementById('b-log').textContent=B.log[B.log.length-1]||'';
   document.getElementById('b-balls').textContent=G.balls;
@@ -877,7 +921,7 @@ async function battleWon(){
       G.badges.push(B.gymId);
       const gym=GYMS.find(g=>g.id===B.gymId);
       const earnedCoins=gym?gym.coins:800;
-      G.coins+=earnedCoins;G.wins++;
+      G.coins+=earnedCoins;G.wins++;advanceQuest('gym');advanceQuest('trainwin');
       document.getElementById('b-end-title').innerHTML=`${gym?.badge||'🏅'} Badge Earned!`;
       document.getElementById('b-end-title').style.color='#FFD54F';
       document.getElementById('b-end-summary').innerHTML=`${gym?.badge} ${gym?.id} Badge · +${earnedCoins}💰`;
@@ -889,7 +933,8 @@ async function battleWon(){
     }
   }
   const coins=B.isWild?Math.floor(50+Math.random()*60):B.trainerCoins;
-  G.coins+=coins;if(!B.isWild){G.wins++;G.balls+=2;G.potions+=1;}
+  if(B.isWild)advanceQuest('wildwin');
+  G.coins+=coins;if(!B.isWild){G.wins++;G.balls+=2;G.potions+=1;advanceQuest('trainwin');}
   if(!G.evolveCount)G.evolveCount=0;
   checkDaycareProgress();
   saveGame();checkAchievements();
@@ -935,7 +980,7 @@ async function usePotion(){
   if(B.phase!=='choose')return;
   if(G.potions<=0){toast('No potions!','#FF6B35');return;}
   const pl=B.refs[B.playerActive];if(pl.hp>=pl.maxHp){toast('HP is full!','#4FC3F7');return;}
-  B.phase='animating';G.potions--;const heal=Math.min(50,pl.maxHp-pl.hp);pl.hp+=heal;
+  B.phase='animating';G.potions--;const heal=Math.min(50,pl.maxHp-pl.hp);pl.hp+=heal;advanceQuest('potion');
   B.log.push(`Used Potion! (+${heal} HP)`);renderBattle();await delay(700);
   await execMove(B.enemyTeam[B.enemyActive],pickEnemy(B.enemyTeam[B.enemyActive],pl),pl);
   if(pl.hp<=0){await playerFaint();return;}B.phase='choose';renderBattle();saveGame();
@@ -949,6 +994,7 @@ async function tryCatch(){
   for(let i=0;i<3;i++){SFX.shake();B.log.push('...shake...');renderBattle();await delay(650);}
   if(Math.random()<chance){
     SFX.caught();B.log.push(`Gotcha! ${en.name} was caught!`);renderBattle();await delay(1100);
+    advanceQuest('catch');
     if(!G.dexCaught.includes(en.id))G.dexCaught.push(en.id);
     if(!G.dexSeen.includes(en.id))G.dexSeen.push(en.id);
     if(G.team.length<6){G.team.push(en);toast(`${en.name} joined your team!`,'#81C784');}
@@ -984,6 +1030,8 @@ function renderWorld(){
   document.getElementById('world-wins').textContent=G.wins;
   document.getElementById('world-streak').textContent=G.streak;
   document.getElementById('world-slot').textContent=currentSlot+1;
+  // Quest indicator
+  if(G.quests&&G.quests.length){const done=G.quests.filter(q=>q.done).length;const wqs=document.getElementById('world-quest-status');if(wqs)wqs.textContent=done===3?'✅ All done!':done>0?`📋 ${done}/3 quests`:'📋 Quests!';}
   const wbs=document.getElementById('world-badge-strip');if(wbs)wbs.textContent=(G.badges||[]).length>0?' '+(G.badges||[]).map(id=>{const g=GYMS.find(x=>x.id===id);return g?g.badge:'';}).join(''):'';
   document.getElementById('world-team').innerHTML=G.team.length
     ?G.team.map(p=>{const pct=Math.max(0,Math.round(p.hp/p.maxHp*100));return`<div style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.04);border-radius:10px;padding:6px 8px;margin-bottom:5px"><img src="${p.sprite}" style="width:38px;height:38px;object-fit:contain"><div style="flex:1;min-width:0"><div style="font-size:7px;text-transform:capitalize;color:#fff">${p.name}${p.isShiny?' ✨':''} <span style="color:#888;font-size:6px">Lv.${p.level}</span> ${stIcon(p.status)}</div><div style="font-size:5px;color:var(--muted);margin:2px 0">HP ${Math.max(0,p.hp)}/${p.maxHp}</div><div class="hp-wrap"><div class="hp-bar" style="width:${pct}%;background:${hpCol(pct)}"></div></div></div></div>`;}).join('')
@@ -1011,7 +1059,16 @@ async function startTrainerBattle(){
   setLoading(true);
   try{
     const enemyTeam=await Promise.all(trainer.team.map(t=>buildInst(t.id,t.lv)));
+    const tQuotes=[
+      'I\'ve been waiting for a trainer like you!',
+      'Prepare yourself!',
+      'Let\'s see what you\'ve got!',
+      'My Pokémon will not lose!',
+      'You won\'t get past me!'
+    ];
     initBattle(false,enemyTeam,`${trainer.emoji} ${trainer.name}`,trainer.coins);
+    B.trainerSprite=trainer.sprite||null;
+    B.trainerQuote=tQuotes[Math.floor(Math.random()*tQuotes.length)];
     B.log=[`${trainer.emoji} ${trainer.name} wants to battle!`];
     setLoading(false);showScreen('s-battle');renderBattle();SFX.encounter();
   }catch(e){setLoading(false);toast('Connection error — try again','#FF6B35');}
@@ -1100,7 +1157,7 @@ async function manualEvolve(teamIdx){
   try{
     const oldName=p.name;SFX.evolveOob();
     await applyEvolutionData(p);
-    if(!G.evolveCount)G.evolveCount=0;G.evolveCount++;
+    if(!G.evolveCount)G.evolveCount=0;G.evolveCount++;advanceQuest('evolve');
     saveGame();checkAchievements();setLoading(false);
     toast(`🎊 ${oldName} evolved into ${p.name}!`,'#FFD54F');
     renderTeamScreen();
@@ -1203,9 +1260,9 @@ async function selectWonderTrade(src,idx){
     document.getElementById('wonder-result-sprite').src=_wonderPokemon.sprite;
     document.getElementById('wonder-result-name').textContent=`${_wonderPokemon.name} · Lv.${_wonderPokemon.level}`;
     document.getElementById('wonder-result-types').innerHTML=_wonderPokemon.types.map(typeTag).join(' ');
-    document.getElementById('wonder-result-shiny').textContent=isShiny?'✨ It/'s shiny! Incredibly rare!':'';
+    document.getElementById('wonder-result-shiny').textContent=isShiny?"✨ It's shiny! Incredibly rare!":'';
     if(isShiny)SFX.shiny();else SFX.levelup();
-    G.wonderTradeCount=(G.wonderTradeCount||0)+1;
+    G.wonderTradeCount=(G.wonderTradeCount||0)+1;advanceQuest('wonder');
     if(!G.dexSeen.includes(receivedId))G.dexSeen.push(receivedId);
     saveGame();
   }catch(e){
@@ -1399,58 +1456,10 @@ function renderSpecial(){
       <div style="font-size:5px;color:var(--faint);margin-top:4px">An Egg will appear after 20 steps!</div>
     </div>`;
   }else{stEl.innerHTML='';}
+  // Quests + Gift
+  renderQuests();
+  renderMysteryGift();
 }
-
-
-// ── GYM SYSTEM ───────────────────────────────────────────────────────────────
-function gymBadgesCount(){return(G.badges||[]).length;}
-function hasBadge(id){return(G.badges||[]).includes(id);}
-
-function renderGyms(){
-  if(!G){return;}
-  if(!G.badges)G.badges=[];
-  const count=gymBadgesCount();
-  const el=document.getElementById('gym-badge-count');if(el)el.textContent=count;
-
-  // Badge strip
-  const strip=document.getElementById('badge-strip');
-  if(strip){
-    strip.innerHTML=GYMS.map(g=>{
-      const earned=hasBadge(g.id);
-      return`<div style="text-align:center;opacity:${earned?1:.25};transition:opacity .3s">
-        <div style="font-size:24px;filter:${earned?'none':'grayscale(1)'}">${g.badge}</div>
-        <div style="font-size:5px;color:${earned?'var(--gold)':'var(--faint)'};margin-top:2px">${g.id.charAt(0).toUpperCase()+g.id.slice(1)}</div>
-      </div>`;
-    }).join('');
-  }
-
-  // World screen badge strip (abbreviated)
-  const worldStrip=document.getElementById('world-badge-strip');
-  if(worldStrip)worldStrip.textContent=count>0?' '+GYMS.filter(g=>hasBadge(g.id)).map(g=>g.badge).join(''):'';
-
-  // Gym list
-  const list=document.getElementById('gym-list');
-  if(!list)return;
-  list.innerHTML=GYMS.map((gym,i)=>{
-    const beaten=hasBadge(gym.id);
-    const locked=count<gym.minBadges;
-    const canChallenge=!beaten&&!locked;
-    const tc=TC[gym.type]||'#BCAAA4';
-    return`<div style="background:${beaten?tc+'18':locked?'rgba(255,255,255,.02)':'rgba(255,255,255,.04)'};border:1px solid ${beaten?tc+'44':locked?'rgba(255,255,255,.06)':'rgba(255,255,255,.12)'};border-radius:12px;padding:12px;margin-bottom:8px;transition:all .3s">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:${canChallenge?'10px':'0'}">
-        <div style="font-size:28px;flex-shrink:0;filter:${locked?'grayscale(1) brightness(.4)':'none'}">${gym.badge}</div>
-        <div style="flex:1;min-width:0">
-          <div style="font-size:7px;color:${beaten?tc:locked?'var(--faint)':'var(--text)'};margin-bottom:2px">${gym.name}</div>
-          <div style="font-size:6px;color:var(--muted)">Leader: ${gym.leader} · Type: ${gym.type}</div>
-          <div style="font-size:5px;color:var(--faint);margin-top:2px">${beaten?'✅ Badge earned!':locked?`🔒 Earn ${gym.minBadges} badges first`:`⚔ ${gym.team.length} Pokémon · +${gym.coins}💰`}</div>
-        </div>
-      </div>
-      ${canChallenge?`<button class="btn btn-primary" style="width:100%;font-size:7px" onclick="startGymBattle(${i})">Challenge ${gym.leader}!</button>`:''}
-      ${beaten?`<div style="text-align:center;font-size:6px;color:${tc}">Badge: ${gym.badge} ${gym.id.charAt(0).toUpperCase()+gym.id.slice(1)} Badge earned!</div>`:''}
-    </div>`;
-  }).join('');
-}
-
 async function startGymBattle(gymIdx){
   const gym=GYMS[gymIdx];
   if(!gym)return;
@@ -1461,12 +1470,168 @@ async function startGymBattle(gymIdx){
   try{
     const enemyTeam=await Promise.all(gym.team.map(t=>buildInst(t.id,t.lv)));
     initBattle(false,enemyTeam,`🏟 ${gym.leader} (${gym.name})`,0);
-    B.gymId=gym.id; // mark as gym battle
+    B.gymId=gym.id;
     B.gymCoins=gym.coins;
+    B.trainerSprite=gym.sprite||null;
+    B.trainerQuote=`I am the ${gym.name} Leader. Prepare for battle!`;
     B.log=[`🏟 Gym Leader ${gym.leader} wants to battle! The ${gym.badge} Badge is on the line!`];
     setLoading(false);showScreen('s-battle');renderBattle();SFX.encounter();
   }catch(e){setLoading(false);toast('Connection error — try again','#FF6B35');}
 }
+
+
+// ── DAILY QUESTS ──────────────────────────────────────────────────────────────
+const QUEST_POOL=[
+  {id:'catch2',   icon:'🎣', text:'Catch 2 wild Pokémon',       type:'catch',   target:2,  reward:{coins:200}},
+  {id:'catch5',   icon:'🎣', text:'Catch 5 wild Pokémon',       type:'catch',   target:5,  reward:{coins:400}},
+  {id:'win3wild', icon:'⚡', text:'Win 3 wild battles',          type:'wildwin', target:3,  reward:{balls:3}},
+  {id:'win5wild', icon:'⚡', text:'Win 5 wild battles',          type:'wildwin', target:5,  reward:{balls:5,coins:150}},
+  {id:'win2train',icon:'⚔', text:'Win 2 trainer battles',       type:'trainwin',target:2,  reward:{coins:300,potions:2}},
+  {id:'win3train',icon:'⚔', text:'Win 3 trainer battles',       type:'trainwin',target:3,  reward:{coins:500,potions:3}},
+  {id:'evolve1',  icon:'✨', text:'Evolve 1 Pokémon',            type:'evolve',  target:1,  reward:{coins:350}},
+  {id:'heal',     icon:'💊', text:'Use a Potion in battle',      type:'potion',  target:1,  reward:{coins:100,potions:2}},
+  {id:'trade1',   icon:'🔄', text:'Do a Wonder Trade',           type:'wonder',  target:1,  reward:{coins:250,balls:2}},
+  {id:'badge1',   icon:'🏅', text:'Win a Gym Battle',            type:'gym',     target:1,  reward:{coins:600,balls:3}},
+];
+
+function todayStr(){return new Date().toDateString();}
+
+function generateDailyQuests(){
+  // Pick 3 random non-duplicate quest types for today
+  const today=todayStr();
+  if(G.questDate===today&&G.quests&&G.quests.length===3)return; // already generated
+  // Seed with date for consistency
+  const seed=new Date().getDate()+new Date().getMonth()*31;
+  const shuffled=[...QUEST_POOL].sort(()=>(Math.sin(seed*QUEST_POOL.indexOf(QUEST_POOL.find(q=>q)))*.5+.5)-.5);
+  // Actually just pick 3 random ones
+  const picks=[];const used=new Set();
+  const rnd=QUEST_POOL.slice().sort(()=>Math.random()-.5);
+  for(const q of rnd){if(!used.has(q.type)&&picks.length<3){picks.push({...q,progress:0,done:false});used.add(q.type);}}
+  G.questDate=today;G.quests=picks;G.questsCompleted=G.questsCompleted||[];
+  G.battleWinsToday=0;G.catchesToday=0;G.trainerWinsToday=0;
+  saveGame();
+}
+
+function advanceQuest(type,amt=1){
+  if(!G.quests)return;
+  const today=todayStr();
+  if(G.questDate!==today)generateDailyQuests();
+  let changed=false;
+  for(const q of G.quests){
+    if(q.type===type&&!q.done){
+      q.progress=Math.min(q.target,(q.progress||0)+amt);
+      if(q.progress>=q.target){
+        q.done=true;
+        // Award reward
+        const r=q.reward;
+        if(r.coins)G.coins+=r.coins;
+        if(r.balls)G.balls+=r.balls;
+        if(r.potions)G.potions+=r.potions;
+        if(r.revives)G.revives+=r.revives;
+        G.questsCompleted=(G.questsCompleted||[]);
+        G.questsCompleted.push(q.id);
+        setTimeout(()=>toast(`📋 Quest done: ${q.text}! Reward: ${rewardText(r)}`,'#FFD54F'),400);
+      }
+      changed=true;break;
+    }
+  }
+  if(changed)saveGame();
+}
+
+function rewardText(r){
+  const parts=[];
+  if(r.coins)parts.push(`+${r.coins}💰`);
+  if(r.balls)parts.push(`+${r.balls}⚪`);
+  if(r.potions)parts.push(`+${r.potions}💊`);
+  if(r.revives)parts.push(`+${r.revives}💫`);
+  return parts.join(' ');
+}
+
+function renderQuests(){
+  const el=document.getElementById('quest-list');if(!el)return;
+  if(!G){el.innerHTML='';return;}
+  generateDailyQuests();
+  const allDone=G.quests.every(q=>q.done);
+  el.innerHTML=(allDone?'<div style="text-align:center;font-size:7px;color:#81C784;padding:8px">✅ All quests done for today! Come back tomorrow.</div>':'')+
+  G.quests.map(q=>{
+    const pct=Math.min(100,Math.round(((q.progress||0)/q.target)*100));
+    const done=q.done;
+    return`<div style="background:${done?'rgba(129,199,132,.08)':'rgba(255,255,255,.03)'};border:1px solid ${done?'rgba(129,199,132,.25)':'rgba(255,255,255,.08)'};border-radius:10px;padding:10px;margin-bottom:8px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:${done?'0':'6px'}">
+        <div style="font-size:20px;flex-shrink:0">${q.icon}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:7px;color:${done?'#81C784':'var(--text)'}">${q.text}</div>
+          <div style="font-size:5px;color:var(--muted);margin-top:2px">Reward: ${rewardText(q.reward)}</div>
+        </div>
+        ${done?'<div style="font-size:14px">✅</div>':`<div style="font-size:7px;color:var(--muted)">${q.progress||0}/${q.target}</div>`}
+      </div>
+      ${!done?`<div class="hp-wrap" style="height:5px"><div style="height:100%;background:linear-gradient(90deg,var(--gold),#FF8F00);border-radius:4px;width:${pct}%"></div></div>`:''}
+    </div>`;
+  }).join('');
+}
+
+// ── MYSTERY GIFT ──────────────────────────────────────────────────────────────
+const GIFT_TABLE=[
+  {weight:30, type:'balls',   min:3,  max:8,  emoji:'⚪', label:'Poké Balls'},
+  {weight:25, type:'coins',   min:200,max:600, emoji:'💰', label:'Coins'},
+  {weight:20, type:'potions', min:2,  max:5,  emoji:'💊', label:'Potions'},
+  {weight:10, type:'revives', min:1,  max:2,  emoji:'💫', label:'Revives'},
+  {weight:10, type:'pokemon', min:1,  max:1,  emoji:'✨', label:'Mystery Pokémon!'},
+  {weight:5,  type:'shiny',   min:1,  max:1,  emoji:'🌟', label:'Rare Pokémon (high shiny chance)!'},
+];
+
+async function claimMysteryGift(){
+  const today=todayStr();
+  if(G.giftDate===today){toast("Already claimed today's gift! Come back tomorrow 🎁",'#4FC3F7');return;}
+  setLoading(true);
+  try{
+    // Weighted random
+    const total=GIFT_TABLE.reduce((s,g)=>s+g.weight,0);
+    let roll=Math.random()*total;
+    let gift=GIFT_TABLE[0];
+    for(const g of GIFT_TABLE){roll-=g.weight;if(roll<=0){gift=g;break;}}
+    const amt=gift.min+Math.floor(Math.random()*(gift.max-gift.min+1));
+
+    if(gift.type==='pokemon'||gift.type==='shiny'){
+      const avgLv=G.team.length?Math.round(G.team.reduce((s,p)=>s+p.level,0)/G.team.length):10;
+      const isShiny=gift.type==='shiny'||(Math.random()<0.25);
+      const giftId=Math.floor(Math.random()*1025)+1;
+      const p=await buildInst(giftId,Math.max(5,avgLv+Math.floor(Math.random()*5)),isShiny);
+      if(G.team.length<6)G.team.push(p);else G.pc.push(p);
+      if(!G.dexCaught.includes(p.id))G.dexCaught.push(p.id);
+      if(!G.dexSeen.includes(p.id))G.dexSeen.push(p.id);
+      G.giftDate=today;saveGame();setLoading(false);
+      SFX.evolve();
+      toast(`🎁 Mystery Gift: ${p.name}${isShiny?' ✨ SHINY':''} (Lv.${p.level})!`,'#CE93D8');
+    }else{
+      G[gift.type]=(G[gift.type]||0)+amt;
+      G.giftDate=today;saveGame();setLoading(false);
+      SFX.buy();
+      toast(`🎁 Mystery Gift: +${amt} ${gift.label}!`,'#CE93D8');
+    }
+    checkAchievements();
+    renderSpecial();
+    renderWorld();
+  }catch(e){setLoading(false);toast('Gift error — try again','#FF6B35');}
+}
+
+function renderMysteryGift(){
+  const el=document.getElementById('mystery-gift-area');if(!el)return;
+  const today=todayStr();
+  const claimed=G&&G.giftDate===today;
+  el.innerHTML=claimed
+    ?`<div style="text-align:center;padding:8px">
+        <div style="font-size:32px;filter:grayscale(1);opacity:.4">🎁</div>
+        <div style="font-size:6px;color:var(--faint);margin-top:6px">Already claimed today!</div>
+        <div style="font-size:5px;color:var(--faint);margin-top:3px">Come back tomorrow ✨</div>
+      </div>`
+    :`<div style="text-align:center">
+        <div style="font-size:36px;margin-bottom:10px;animation:float 2s ease-in-out infinite">🎁</div>
+        <div style="font-size:6px;color:var(--muted);margin-bottom:12px">Your daily gift is waiting!</div>
+        <button class="btn btn-purple" style="width:100%;font-size:8px" onclick="claimMysteryGift()">🎁 Claim Today's Gift!</button>
+      </div>`;
+}
+
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded',()=>{showScreen('s-title');renderTitle();});
