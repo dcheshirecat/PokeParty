@@ -56,6 +56,9 @@
     .floating{animation:float 3s ease-in-out infinite}
     .shiny-anim{animation:shiny 1.5s ease-in-out infinite}
     ::-webkit-scrollbar{width:3px}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.2);border-radius:2px}
+    .tc-stat-box{background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:10px;padding:10px 12px;text-align:center}
+    .tc-stat-val{font-size:13px;color:var(--gold);display:block;margin-bottom:3px}
+    .tc-stat-lbl{font-size:5px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
   </style>
 </head>
 <body>
@@ -83,6 +86,24 @@
   </div>
 </div>
 
+
+<!-- Nickname overlay -->
+<div class="overlay" id="nickname-overlay" onclick="if(event.target===this)closeNicknameOverlay()">
+  <div class="overlay-panel" style="padding:20px">
+    <div style="font-size:8px;color:var(--gold);margin-bottom:6px">✏️ Give a Nickname</div>
+    <div id="nickname-pokemon-name" style="font-size:6px;color:var(--muted);margin-bottom:12px;text-transform:capitalize"></div>
+    <input id="nickname-input" maxlength="12" placeholder="Enter nickname (max 12 chars)"
+      style="width:100%;background:rgba(255,255,255,.07);border:1px solid var(--border);border-radius:8px;
+             padding:10px 12px;color:var(--text);font-family:var(--font);font-size:8px;outline:none;
+             margin-bottom:12px;-webkit-appearance:none"
+      oninput="this.value=this.value.slice(0,12)">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+      <button class="btn btn-ghost btn-sm" onclick="closeNicknameOverlay()">Cancel</button>
+      <button class="btn btn-ghost btn-sm" style="color:var(--red);border-color:rgba(239,154,154,.3)" onclick="submitNickname(true)">Remove</button>
+      <button class="btn btn-green btn-sm" onclick="submitNickname(false)">Save ✓</button>
+    </div>
+  </div>
+</div>
 <!-- Bottom nav -->
 <nav id="bottom-nav">
   <button class="nav-btn" id="nav-world"   onclick="goWorld()"><span class="ni">🗺</span>World</button>
@@ -140,7 +161,10 @@
       <button class="btn btn-blue"    style="font-size:7px;padding:14px 8px" onclick="startTrainerBattle()">⚔ Trainer Battle</button>
     </div>
     <button class="btn btn-ghost" style="width:100%;font-size:6px;margin-bottom:6px" onclick="healTeam()">💊 Heal Entire Team</button>
-    <button class="btn btn-gold" style="width:100%;font-size:7px;padding:11px" onclick="goGyms()">🏟 Gym Challenge <span id="world-badge-strip"></span></button>
+    <div style="display:grid;grid-template-columns:1fr auto;gap:8px;margin-bottom:0">
+      <button class="btn btn-gold" style="font-size:7px;padding:11px" onclick="goGyms()">🏟 Gym Challenge <span id="world-badge-strip"></span></button>
+      <button class="btn btn-ghost" style="font-size:7px;padding:11px;white-space:nowrap" onclick="goTrainerCard()">👤 Card</button>
+    </div>
     <div style="text-align:center;margin-top:10px">
       <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
         <button class="btn btn-ghost btn-sm" style="font-size:5px;color:var(--faint)" onclick="confirmSwitchSlot()">💾 Slot <span id="world-slot">1</span> · Save &amp; Slots</button>
@@ -170,7 +194,8 @@
     </div>
     <!-- Trainer portrait (trainer battles only) -->
     <div id="b-trainer-portrait" style="display:none;text-align:center;margin-bottom:8px;animation:slideUp .3s ease-out">
-      <img id="b-trainer-img" src="" alt="" style="height:72px;object-fit:contain;image-rendering:auto;filter:drop-shadow(0 2px 8px rgba(0,0,0,.5))">
+      <img id="b-trainer-img" src="" alt="" style="height:72px;object-fit:contain;image-rendering:auto;filter:drop-shadow(0 2px 8px rgba(0,0,0,.5))" onerror="this.style.display='none';document.getElementById('b-trainer-emoji-fb').style.display='block'">
+      <div id="b-trainer-emoji-fb" style="display:none;font-size:40px;line-height:1.2"></div>
       <div id="b-trainer-quote" style="font-size:6px;color:var(--muted);margin-top:4px;line-height:1.8;font-style:italic"></div>
     </div>
     <!-- Enemy -->
@@ -365,7 +390,10 @@
   <div class="card" style="max-width:430px;width:100%;margin-top:10px;margin-bottom:10px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
       <div style="color:var(--gold);font-size:9px">🏟 Gym Challenge</div>
-      <div style="font-size:7px;color:var(--muted)">Badges: <span id="gym-badge-count">0</span>/8</div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="font-size:7px;color:var(--muted)">Badges: <span id="gym-badge-count">0</span>/<span id="gym-badge-total">8</span></div>
+        <button class="btn btn-ghost btn-sm" style="font-size:6px" onclick="goWorld()">← World</button>
+      </div>
     </div>
     <div style="font-size:6px;color:var(--muted);margin-bottom:14px">Defeat all 8 Gym Leaders to become Champion!</div>
 
@@ -377,6 +405,78 @@
   </div>
 </div>
 
+
+<!-- Pokémon Stats overlay -->
+<div class="overlay" id="stats-overlay" onclick="if(event.target===this)closeStats()">
+  <div class="overlay-panel" style="padding:0;overflow:hidden;border-radius:16px 16px 0 0">
+    <!-- Header band -->
+    <div id="stats-header" style="padding:16px 16px 10px;display:flex;align-items:center;gap:12px">
+      <img id="stats-sprite" src="" style="width:72px;height:72px;object-fit:contain;flex-shrink:0;filter:drop-shadow(0 0 10px rgba(255,255,255,.2))">
+      <div style="flex:1;min-width:0">
+        <div id="stats-name" style="font-size:10px;color:#fff;text-transform:capitalize;margin-bottom:2px"></div>
+        <div id="stats-num" style="font-size:6px;color:rgba(255,255,255,.5);margin-bottom:5px"></div>
+        <div id="stats-types" style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:5px"></div>
+        <div id="stats-extra" style="font-size:6px;color:rgba(255,255,255,.6);line-height:1.8"></div>
+      </div>
+    </div>
+    <!-- Stat bars -->
+    <div style="padding:10px 16px 6px">
+      <div style="font-size:6px;color:rgba(255,255,255,.4);margin-bottom:8px;letter-spacing:1px">BASE STATS</div>
+      <div id="stats-bars"></div>
+      <div id="stats-bst" style="text-align:right;font-size:6px;color:rgba(255,255,255,.4);margin-top:6px"></div>
+    </div>
+    <!-- Moves (if team member) -->
+    <div id="stats-moves-section" style="padding:0 16px 10px;display:none">
+      <div style="font-size:6px;color:rgba(255,255,255,.4);margin-bottom:6px;letter-spacing:1px">MOVES</div>
+      <div id="stats-moves" style="display:flex;flex-wrap:wrap;gap:5px"></div>
+    </div>
+    <div style="padding:10px 16px 14px">
+      <button class="btn btn-ghost" style="width:100%;font-size:7px" onclick="closeStats()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ TRAINER CARD ════════════════════════════════════════════════════════ -->
+<div class="screen" id="s-trainer-card">
+  <div class="card" style="max-width:430px;width:100%;margin-top:10px">
+    <!-- Card header -->
+    <div id="tc-header" style="border-radius:12px;padding:16px;margin-bottom:14px;position:relative;overflow:hidden">
+      <div style="position:absolute;inset:0;opacity:.15;background:linear-gradient(135deg,var(--blue),var(--gold))"></div>
+      <div style="position:relative;display:flex;align-items:center;gap:12px">
+        <div id="tc-lead-sprite" style="width:76px;height:76px;flex-shrink:0;background:rgba(255,255,255,.05);border-radius:12px;display:flex;align-items:center;justify-content:center;overflow:hidden">
+          <img id="tc-lead-img" src="" style="width:72px;height:72px;object-fit:contain" onerror="this.parentElement.innerHTML='👤'">
+        </div>
+        <div style="flex:1;min-width:0">
+          <div id="tc-name" style="font-size:12px;color:var(--gold);margin-bottom:4px"></div>
+          <div id="tc-title" style="font-size:6px;color:rgba(255,255,255,.6);margin-bottom:6px"></div>
+          <button class="btn btn-ghost btn-sm" style="font-size:6px" onclick="editTrainerName()">✏️ Edit Name</button>
+        </div>
+      </div>
+    </div>
+    <!-- Badges -->
+    <div style="margin-bottom:14px">
+      <div style="font-size:6px;color:var(--muted);letter-spacing:1px;margin-bottom:8px">GYM BADGES</div>
+      <div id="tc-badges" style="display:flex;gap:6px;flex-wrap:wrap;padding:10px;background:rgba(255,255,255,.03);border-radius:10px;border:1px solid var(--border);min-height:44px;align-items:center"></div>
+    </div>
+    <!-- Stats grid -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
+      <div class="tc-stat-box" id="tc-s-caught"></div>
+      <div class="tc-stat-box" id="tc-s-wins"></div>
+      <div class="tc-stat-box" id="tc-s-streak"></div>
+      <div class="tc-stat-box" id="tc-s-dex"></div>
+      <div class="tc-stat-box" id="tc-s-coins"></div>
+      <div class="tc-stat-box" id="tc-s-trades"></div>
+    </div>
+    <!-- Team -->
+    <div style="margin-bottom:12px">
+      <div style="font-size:6px;color:var(--muted);letter-spacing:1px;margin-bottom:8px">CURRENT TEAM</div>
+      <div id="tc-team" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;padding:8px;background:rgba(255,255,255,.03);border-radius:10px;border:1px solid var(--border)"></div>
+    </div>
+    <div style="font-size:5px;color:var(--faint);text-align:center;margin-bottom:10px">Joined: <span id="tc-join-date"></span></div>
+    <button class="btn btn-ghost" style="width:100%;font-size:7px" onclick="goWorld()">← Back to World</button>
+  </div>
+</div>
+
 </div><!-- #app -->
 <script>
 'use strict';
@@ -384,7 +484,7 @@
 // ── TYPE CHART ───────────────────────────────────────────────────────────────
 const EFF={normal:{rock:.5,ghost:0,steel:.5},fire:{fire:.5,water:.5,grass:2,ice:2,rock:.5,bug:2,dragon:.5,steel:2},water:{fire:2,water:.5,grass:.5,ground:2,rock:2,dragon:.5},electric:{water:2,electric:.5,grass:.5,ground:0,flying:2,dragon:.5},grass:{fire:.5,water:2,grass:.5,poison:.5,ground:2,flying:.5,bug:.5,rock:2,dragon:.5,steel:.5},ice:{fire:.5,water:.5,grass:2,ice:.5,ground:2,flying:2,dragon:2,steel:.5},fighting:{normal:2,ice:2,poison:.5,flying:.5,psychic:.5,bug:.5,rock:2,ghost:0,dark:2,steel:2,fairy:.5},poison:{grass:2,poison:.5,ground:.5,rock:.5,ghost:.5,steel:0,fairy:2},ground:{fire:2,electric:2,grass:.5,poison:2,flying:0,bug:.5,rock:2,steel:2},flying:{electric:.5,grass:2,fighting:2,bug:2,rock:.5,steel:.5},psychic:{fighting:2,poison:2,psychic:.5,dark:0,steel:.5},bug:{fire:.5,grass:2,fighting:.5,poison:.5,flying:.5,psychic:2,ghost:.5,dark:2,steel:.5,fairy:.5},rock:{fire:2,ice:2,fighting:.5,ground:.5,flying:2,bug:2,steel:.5},ghost:{normal:0,psychic:2,ghost:2,dark:.5},dragon:{dragon:2,steel:.5,fairy:0},dark:{fighting:.5,psychic:2,ghost:2,dark:.5,fairy:.5},steel:{fire:.5,water:.5,electric:.5,ice:2,rock:2,steel:.5,fairy:2},fairy:{fire:.5,fighting:2,poison:.5,dragon:2,dark:2,steel:.5}};
 const TC={fire:'#FF6B35',water:'#4FC3F7',grass:'#81C784',electric:'#FFD54F',psychic:'#F48FB1',ice:'#80DEEA',dragon:'#7986CB',dark:'#8D6E63',fairy:'#F8BBD9',normal:'#BCAAA4',fighting:'#EF9A9A',flying:'#90CAF9',poison:'#CE93D8',ground:'#FFCC80',rock:'#A5D6A7',bug:'#DCEDC8',ghost:'#9575CD',steel:'#CFD8DC'};
-const STARTERS=[1,4,7,152,155,158,252,255,258];
+const STARTERS=[1,4,7,152,155,158,252,255,258,387,390,393,495,498,501,650,653,656,722,725,728,810,813,816,906,909,912];
 const TRAINERS=[
   {name:'Bug Catcher Joey',sprite:'https://play.pokemonshowdown.com/sprites/trainers/youngster.png',emoji:'🧒',minW:0, team:[{id:10,lv:5},{id:13,lv:6}],coins:60},
   {name:'Lass Amy',sprite:'https://play.pokemonshowdown.com/sprites/trainers/lass.png',        emoji:'👧',minW:0, team:[{id:35,lv:6},{id:39,lv:7}],coins:80},
@@ -419,6 +519,38 @@ const GYMS=[
    team:[{id:58,lv:42},{id:77,lv:40},{id:78,lv:42},{id:59,lv:47}]},
   {id:'earth',  badge:'🌍',name:'Viridian City Gym', leader:'Giovanni',sprite:'https://play.pokemonshowdown.com/sprites/trainers/giovanni.png',type:'ground',  coins:1600, minBadges:7,
    team:[{id:111,lv:45},{id:51,lv:42},{id:31,lv:44},{id:32,lv:45},{id:112,lv:50}]},
+  // ── Johto Gyms ──────────────────────────────────────────────────────────────
+  {id:'zephyr', badge:'🪶',name:'Violet City Gym',   leader:'Falkner', sprite:'https://play.pokemonshowdown.com/sprites/trainers/falkner.png',  type:'flying',  coins:400,  minBadges:8,
+   team:[{id:276,lv:9},{id:16,lv:13}]},
+  {id:'hive',   badge:'🐝',name:'Azalea Town Gym',   leader:'Bugsy',   sprite:'https://play.pokemonshowdown.com/sprites/trainers/bugsy.png',    type:'bug',     coins:500,  minBadges:9,
+   team:[{id:123,lv:15},{id:165,lv:14},{id:166,lv:16}]},
+  {id:'plain',  badge:'🌸',name:'Goldenrod City Gym',leader:'Whitney',  sprite:'https://play.pokemonshowdown.com/sprites/trainers/whitney.png',  type:'normal',  coins:650,  minBadges:10,
+   team:[{id:58,lv:17},{id:241,lv:19}]},
+  {id:'fog',    badge:'🌫️',name:'Ecruteak City Gym', leader:'Morty',   sprite:'https://play.pokemonshowdown.com/sprites/trainers/morty.png',    type:'ghost',   coins:800,  minBadges:11,
+   team:[{id:93,lv:21},{id:93,lv:21},{id:94,lv:25},{id:93,lv:23}]},
+  {id:'storm',  badge:'⛰️',name:'Cianwood City Gym', leader:'Chuck',   sprite:'https://play.pokemonshowdown.com/sprites/trainers/chuck.png',    type:'fighting',coins:950,  minBadges:12,
+   team:[{id:62,lv:27},{id:107,lv:29}]},
+  {id:'glacier',badge:'❄️',name:'Mahogany Town Gym', leader:'Pryce',   sprite:'https://play.pokemonshowdown.com/sprites/trainers/pryce.png',    type:'ice',     coins:1100, minBadges:13,
+   team:[{id:86,lv:27},{id:87,lv:29},{id:221,lv:31}]},
+  {id:'rising', badge:'🌩️',name:'Blackthorn City Gym',leader:'Clair',  sprite:'https://play.pokemonshowdown.com/sprites/trainers/clair.png',    type:'dragon',  coins:1400, minBadges:14,
+   team:[{id:148,lv:37},{id:148,lv:37},{id:149,lv:40},{id:230,lv:35}]},
+  // ── Hoenn Gyms ──────────────────────────────────────────────────────────────
+  {id:'stone',  badge:'💎',name:'Rustboro City Gym',  leader:'Roxanne', sprite:'https://play.pokemonshowdown.com/sprites/trainers/roxanne.png',  type:'rock',    coins:400,  minBadges:16,
+   team:[{id:304,lv:14},{id:338,lv:15}]},
+  {id:'knuckle',badge:'🥊',name:'Dewford Town Gym',   leader:'Brawly',  sprite:'https://play.pokemonshowdown.com/sprites/trainers/brawly.png',   type:'fighting',coins:520,  minBadges:17,
+   team:[{id:296,lv:17},{id:237,lv:18}]},
+  {id:'dynamo', badge:'⚡',name:'Mauville City Gym',  leader:'Wattson', sprite:'https://play.pokemonshowdown.com/sprites/trainers/wattson.png',  type:'electric',coins:680,  minBadges:18,
+   team:[{id:100,lv:20},{id:82,lv:20},{id:310,lv:22}]},
+  {id:'heat',   badge:'🔥',name:'Lavaridge Town Gym', leader:'Flannery',sprite:'https://play.pokemonshowdown.com/sprites/trainers/flannery.png', type:'fire',    coins:820,  minBadges:19,
+   team:[{id:322,lv:24},{id:218,lv:24},{id:219,lv:26},{id:323,lv:28}]},
+  {id:'balance',badge:'🌿',name:'Petalburg City Gym', leader:'Norman',  sprite:'https://play.pokemonshowdown.com/sprites/trainers/norman.png',   type:'normal',  coins:980,  minBadges:20,
+   team:[{id:289,lv:27},{id:289,lv:27},{id:288,lv:30}]},
+  {id:'feather',badge:'🌬️',name:'Fortree City Gym',  leader:'Winona',  sprite:'https://play.pokemonshowdown.com/sprites/trainers/winona.png',   type:'flying',  coins:1150, minBadges:21,
+   team:[{id:334,lv:29},{id:279,lv:29},{id:277,lv:31},{id:330,lv:33}]},
+  {id:'mind',   badge:'🔮',name:'Mossdeep City Gym',  leader:'Tate&Liza',sprite:'https://play.pokemonshowdown.com/sprites/trainers/tate.png', type:'psychic', coins:1400, minBadges:22,
+   team:[{id:338,lv:41},{id:337,lv:41}]},
+  {id:'rain',   badge:'💧',name:'Sootopolis City Gym',leader:'Wallace', sprite:'https://play.pokemonshowdown.com/sprites/trainers/wallace.png',  type:'water',   coins:1700, minBadges:23,
+   team:[{id:363,lv:40},{id:320,lv:40},{id:342,lv:42},{id:119,lv:43},{id:350,lv:46}]},
 ];
 const MART_ITEMS=[
   {id:'ball',   name:'Poké Ball',    emoji:'⚪',desc:'Catch wild Pokémon',              cost:200,stat:'balls',  amt:1},
@@ -491,7 +623,7 @@ let currentSlot=0;
 let G=null;
 
 function getSK(slot){return SK_BASE+slot;}
-function newGame(){G={team:[],pc:[],dexSeen:[],dexCaught:[],wins:0,balls:10,potions:3,revives:0,coins:0,streak:1,lastDate:new Date().toDateString(),daycare:[null,null],daycareSteps:0,egg:null,eggSteps:0,wonderTradeCount:0,evolveCount:0,badges:[],unlockedAchievements:[],questDate:null,quests:[],questsCompleted:[],giftDate:null,battleWinsToday:0,catchesToday:0,trainerWinsToday:0};}
+function newGame(){G={team:[],pc:[],dexSeen:[],dexCaught:[],wins:0,balls:10,potions:3,revives:0,coins:0,streak:1,lastDate:new Date().toDateString(),daycare:[null,null],daycareSteps:0,egg:null,eggSteps:0,wonderTradeCount:0,evolveCount:0,badges:[],unlockedAchievements:[],questDate:null,quests:[],questsCompleted:[],giftDate:null,battleWinsToday:0,catchesToday:0,trainerWinsToday:0,trainerName:'Trainer',joinDate:new Date().toDateString(),totalCoinsEarned:0,bestStreak:1};}
 function saveGame(){try{localStorage.setItem(getSK(currentSlot),JSON.stringify(G));}catch(e){}}
 function loadSlot(slot){
   try{const d=JSON.parse(localStorage.getItem(getSK(slot))||'null');
@@ -507,6 +639,7 @@ function checkStreak(){
   if(G.lastDate!==today){
     const diff=(new Date(today)-new Date(G.lastDate))/86400000;
     G.streak=diff===1?G.streak+1:1;G.lastDate=today;
+    if(G.streak>(G.bestStreak||1))G.bestStreak=G.streak;
     const bonus=Math.min(G.streak,5);G.balls+=bonus;G.coins+=bonus*50;
     toast(`🔥 ${G.streak} day streak! +${bonus} Balls +${bonus*50}💰`,'#FFD54F');saveGame();
   }
@@ -563,14 +696,14 @@ function openConfirm(msg,okLabel,okColor,cb){
 function closeConfirm(){document.getElementById('confirm-overlay').classList.remove('open');}
 
 // ── NAVIGATION ────────────────────────────────────────────────────────────────
-const NAV_SCREENS=['s-world','s-team','s-mart','s-dex','s-achievements','s-special','s-gyms'];
+const NAV_SCREENS=['s-world','s-team','s-mart','s-dex','s-achievements','s-special','s-gyms','s-trainer-card'];
 function showScreen(id){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   const showNav=NAV_SCREENS.includes(id);
   document.getElementById('bottom-nav').classList.toggle('visible',showNav);
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('at'));
-  const map={'s-world':'nav-world','s-team':'nav-team','s-mart':'nav-mart','s-dex':'nav-dex','s-achievements':'nav-achieve','s-special':'nav-special'};
+  const map={'s-world':'nav-world','s-team':'nav-team','s-mart':'nav-mart','s-dex':'nav-dex','s-achievements':'nav-achieve','s-special':'nav-special','s-gyms':'nav-special','s-trainer-card':'nav-world'};
   if(map[id])document.getElementById(map[id]).classList.add('at');
 }
 function goWorld(){showScreen('s-world');renderWorld();}
@@ -580,6 +713,7 @@ function goDex(){showScreen('s-dex');renderDexScreen();}
 function goAchievements(){showScreen('s-achievements');renderAchievements();}
 function goSpecial(){showScreen('s-special');renderSpecial();}
 function goGyms(){showScreen('s-gyms');renderGyms();}
+function goTrainerCard(){showScreen('s-trainer-card');renderTrainerCard();}
 function battleGoHome(){
   document.getElementById('b-end-overlay').style.display='none';
   if(B)B=null;goWorld();
@@ -673,7 +807,7 @@ const ACHIEVEMENTS=[
   {id:'ditto_breed',   icon:'💜', name:'Ditto Magic',     desc:'Breed using a Ditto',                   check:g=>(g.dittoBreeds||0)>=1},
   {id:'first_badge',  icon:'🪨', name:'Badge Collector', desc:'Earn your first Gym Badge',             check:g=>(g.badges||[]).length>=1},
   {id:'four_badges',  icon:'🌈', name:'Halfway There',   desc:'Earn 4 Gym Badges',                     check:g=>(g.badges||[]).length>=4},
-  {id:'all_badges',   icon:'🌟', name:'Gym Champion',    desc:'Collect all 8 Gym Badges!',             check:g=>(g.badges||[]).length>=8},
+  {id:'all_badges',   icon:'🌟', name:'Gym Champion',    desc:'Collect all 8 Gym Badges!',             check:g=>(g.badges||[]).length>=GYMS.length},
   {id:'gift_claimed',  icon:'🎁', name:'Gift Receiver',   desc:'Claim your first Mystery Gift',         check:g=>!!g.giftDate},
   {id:'quests_done',   icon:'📋', name:'Quest Master',    desc:'Complete all 3 daily quests in one day',check:g=>(g.quests||[]).every(q=>q.done)},
 ];
@@ -789,9 +923,18 @@ function renderBattle(){
   const portrait=document.getElementById('b-trainer-portrait');
   const tImg=document.getElementById('b-trainer-img');
   const tQuote=document.getElementById('b-trainer-quote');
-  if(!B.isWild&&B.trainerSprite&&!ended){
+  if(!B.isWild&&!ended){
     portrait.style.display='block';
-    tImg.src=B.trainerSprite;
+    const emojiFb=document.getElementById('b-trainer-emoji-fb');
+    // Reset visibility in case previous battle had a broken image
+    tImg.style.display='';
+    if(emojiFb)emojiFb.style.display='none';
+    if(B.trainerSprite){
+      tImg.src=B.trainerSprite;
+    } else {
+      tImg.style.display='none';
+      if(emojiFb){emojiFb.style.display='block';emojiFb.textContent=B.trainerEmoji||'🏋️';}
+    }
     tQuote.textContent=B.trainerQuote||'';
   }else{portrait.style.display='none';}
   document.getElementById('b-time-badge').textContent=timeLabel();
@@ -1068,6 +1211,7 @@ async function startTrainerBattle(){
     ];
     initBattle(false,enemyTeam,`${trainer.emoji} ${trainer.name}`,trainer.coins);
     B.trainerSprite=trainer.sprite||null;
+    B.trainerEmoji=trainer.emoji||'⚔️';
     B.trainerQuote=tQuotes[Math.floor(Math.random()*tQuotes.length)];
     B.log=[`${trainer.emoji} ${trainer.name} wants to battle!`];
     setLoading(false);showScreen('s-battle');renderBattle();SFX.encounter();
@@ -1093,13 +1237,34 @@ async function pickStarter(id){
 }
 
 // ── TEAM SCREEN ───────────────────────────────────────────────────────────────
+let _nickTarget=null;  // {list, idx}
 function nicknamePokemon(list,i){
   const p=list[i];
-  const nn=prompt(`Nickname for ${p.name} (leave blank to remove):`,p.nickname||'');
-  if(nn===null)return;
-  p.nickname=nn.trim().slice(0,12)||null;
-  saveGame();checkAchievements();renderTeamScreen();
-  toast(p.nickname?`Named "${p.nickname}"! 💛`:'Nickname removed','#FFD54F');
+  _nickTarget={list,i};
+  document.getElementById('nickname-pokemon-name').textContent=`Nickname for ${p.nickname||p.name}`;
+  document.getElementById('nickname-input').value=p.nickname||'';
+  document.getElementById('nickname-overlay').classList.add('open');
+  setTimeout(()=>document.getElementById('nickname-input').focus(),150);
+}
+function closeNicknameOverlay(){
+  document.getElementById('nickname-overlay').classList.remove('open');
+  _nickTarget=null;
+}
+function submitNickname(remove){
+  if(!_nickTarget)return;
+  const {list,i}=_nickTarget;
+  const p=list[i];
+  if(remove){
+    p.nickname=null;
+    toast('Nickname removed','#BCAAA4');
+  } else {
+    const nn=document.getElementById('nickname-input').value.trim().slice(0,12);
+    p.nickname=nn||null;
+    toast(p.nickname?`Named "${p.nickname}"! 💛`:'Nickname cleared','#FFD54F');
+  }
+  saveGame();checkAchievements();
+  closeNicknameOverlay();
+  renderTeamScreen();
 }
 function renderTeamScreen(){
   function teamCard(p,i){
@@ -1124,6 +1289,7 @@ function renderTeamScreen(){
         <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">
           <button class="btn btn-ghost btn-sm" onclick="moveToPC(${i})">→PC</button>
           <button class="btn btn-ghost btn-sm" style="font-size:5px;padding:5px 8px" onclick="nicknamePokemon(G.team,${i})">✏️</button>
+          <button class="btn btn-ghost btn-sm" style="font-size:5px;padding:5px 8px;color:var(--blue);border-color:rgba(79,195,247,.3)" onclick="showStats(G.team[${i}])">📊</button>
         </div>
       </div>
       ${canEvolve?`<button class="btn btn-gold" style="width:100%;font-size:7px;margin-bottom:6px" onclick="manualEvolve(${i})">✨ Evolve ${dn}!</button>`:''}
@@ -1191,8 +1357,8 @@ function buyItem(id){
 // ── POKÉDEX ───────────────────────────────────────────────────────────────────
 async function renderDexScreen(){
   if(!G)return;
-  document.getElementById('dex-count').textContent=`${G.dexCaught.length} / 386 caught · ${G.dexSeen.length} seen`;
-  document.getElementById('dex-progress').style.width=(G.dexCaught.length/386*100)+'%';
+  document.getElementById('dex-count').textContent=`${G.dexCaught.length} / 1025 caught · ${G.dexSeen.length} seen`;
+  document.getElementById('dex-progress').style.width=(G.dexCaught.length/1025*100)+'%';
   document.getElementById('dex-grid').innerHTML='<div style="grid-column:1/-1;text-align:center;color:var(--muted);font-size:7px;padding:20px">Loading...</div>';
   const q=document.getElementById('dex-search').value.toLowerCase();
   const ids=G.dexCaught.filter(id=>!q||id.toString().includes(q));
@@ -1201,7 +1367,7 @@ async function renderDexScreen(){
     const d=await fetchPoke(id).catch(()=>null);if(!d)return'';
     const types=d.types.map(t=>t.type.name);const sprite=d.sprites.other?.['official-artwork']?.front_default||d.sprites.front_default;const tc=TC[types[0]]||'#BCAAA4';
     const inTeam=G.team.some(p=>p.id===id);const isShiny=G.team.concat(G.pc).some(p=>p.id===id&&p.isShiny);
-    return`<div style="background:${tc}15;border:1px solid ${tc}30;border-radius:10px;padding:7px 4px;text-align:center">${inTeam?'<div style="font-size:7px;color:#FFD54F">★</div>':''}${isShiny?'<div style="font-size:7px;color:#FFD700">✨</div>':''}<img src="${sprite}" style="width:52px;height:52px;object-fit:contain" loading="lazy"><div style="color:var(--faint);font-size:5px">#${String(id).padStart(3,'0')}</div><div style="color:#fff;font-size:6px;text-transform:capitalize">${d.name}</div><div style="display:flex;gap:2px;justify-content:center;margin-top:3px;flex-wrap:wrap">${types.map(typeTag).join('')}</div></div>`;
+    return`<div style="background:${tc}15;border:1px solid ${tc}30;border-radius:10px;padding:7px 4px;text-align:center;cursor:pointer" onclick="showStats({id:${id},name:'${d.name}',sprite:'${sprite}',types:${JSON.stringify(types)},isShiny:${isShiny}})"> ${inTeam?'<div style="font-size:7px;color:#FFD54F">★</div>':''}${isShiny?'<div style="font-size:7px;color:#FFD700">✨</div>':''}<img src="${sprite}" style="width:52px;height:52px;object-fit:contain" loading="lazy"><div style="color:var(--faint);font-size:5px">#${String(id).padStart(3,'0')}</div><div style="color:#fff;font-size:6px;text-transform:capitalize">${d.name}</div><div style="display:flex;gap:2px;justify-content:center;margin-top:3px;flex-wrap:wrap">${types.map(typeTag).join('')}</div></div>`;
   }));
   document.getElementById('dex-grid').innerHTML=cards.join('');
 }
@@ -1460,6 +1626,57 @@ function renderSpecial(){
   renderQuests();
   renderMysteryGift();
 }
+// ── GYM SYSTEM ───────────────────────────────────────────────────────────────
+function gymBadgesCount(){return(G&&G.badges||[]).length;}
+function hasBadge(id){return(G&&G.badges||[]).includes(id);}
+
+function renderGyms(){
+  if(!G){return;}
+  if(!G.badges)G.badges=[];
+  const count=gymBadgesCount();
+  const el=document.getElementById('gym-badge-count');if(el)el.textContent=count;
+  const et=document.getElementById('gym-badge-total');if(et)et.textContent=GYMS.length;
+
+  const strip=document.getElementById('badge-strip');
+  if(strip){
+    strip.innerHTML=GYMS.map(g=>{
+      const earned=hasBadge(g.id);
+      return`<div style="text-align:center;opacity:${earned?1:.2};transition:opacity .3s">
+        <div style="font-size:26px">${g.badge}</div>
+        <div style="font-size:5px;color:${earned?'var(--gold)':'var(--faint)'};margin-top:2px;text-transform:capitalize">${g.id}</div>
+      </div>`;
+    }).join('');
+  }
+
+  const wbs=document.getElementById('world-badge-strip');
+  if(wbs)wbs.textContent=count>0?' '+GYMS.filter(g=>hasBadge(g.id)).map(g=>g.badge).join(''):' (0/8)';
+
+  const list=document.getElementById('gym-list');
+  if(!list)return;
+  list.innerHTML=GYMS.map((gym,i)=>{
+    const beaten=hasBadge(gym.id);
+    const locked=count<gym.minBadges;
+    const canChallenge=!beaten&&!locked;
+    const tc=TC[gym.type]||'#BCAAA4';
+    const imgHtml=gym.sprite
+      ? `<img src="${gym.sprite}" style="height:48px;object-fit:contain;flex-shrink:0;filter:drop-shadow(0 2px 6px rgba(0,0,0,.4))" onerror="this.style.display='none'">`
+      : `<div style="font-size:30px;flex-shrink:0">${gym.badge}</div>`;
+    return`<div style="background:${beaten?tc+'18':locked?'rgba(255,255,255,.02)':'rgba(255,255,255,.04)'};border:1px solid ${beaten?tc+'44':locked?'rgba(255,255,255,.06)':'rgba(255,255,255,.12)'};border-radius:12px;padding:12px;margin-bottom:8px;transition:all .3s">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:${canChallenge?'10px':'0'}">
+        ${imgHtml}
+        <div style="flex:1;min-width:0">
+          <div style="font-size:7px;color:${beaten?tc:locked?'var(--faint)':'var(--text)'};margin-bottom:2px">${gym.name}</div>
+          <div style="font-size:6px;color:var(--muted)">Leader: ${gym.leader} · Type: ${gym.type}</div>
+          <div style="font-size:5px;color:var(--faint);margin-top:2px">${beaten?'✅ Badge earned!':locked?'🔒 Earn '+gym.minBadges+' badge'+(gym.minBadges!==1?'s':'')+' first':'⚔ '+gym.team.length+' Pokémon · +'+gym.coins+'💰'}</div>
+        </div>
+      </div>
+      ${canChallenge?`<button class="btn btn-primary" style="width:100%;font-size:7px" onclick="startGymBattle(${i})">⚔ Challenge ${gym.leader}!</button>`:''}
+      ${beaten?`<div style="text-align:center;font-size:6px;color:${tc};margin-top:4px">${gym.badge} ${gym.id.charAt(0).toUpperCase()+gym.id.slice(1)} Badge earned!</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+
 async function startGymBattle(gymIdx){
   const gym=GYMS[gymIdx];
   if(!gym)return;
@@ -1473,6 +1690,7 @@ async function startGymBattle(gymIdx){
     B.gymId=gym.id;
     B.gymCoins=gym.coins;
     B.trainerSprite=gym.sprite||null;
+    B.trainerEmoji=gym.badge||'🏅';
     B.trainerQuote=`I am the ${gym.name} Leader. Prepare for battle!`;
     B.log=[`🏟 Gym Leader ${gym.leader} wants to battle! The ${gym.badge} Badge is on the line!`];
     setLoading(false);showScreen('s-battle');renderBattle();SFX.encounter();
@@ -1631,6 +1849,173 @@ function renderMysteryGift(){
         <button class="btn btn-purple" style="width:100%;font-size:8px" onclick="claimMysteryGift()">🎁 Claim Today's Gift!</button>
       </div>`;
 }
+
+
+// ── POKÉMON STATS OVERLAY ─────────────────────────────────────────────────────
+const STAT_META=[
+  {key:'hp',  label:'HP',  color:'#81C784', max:255},
+  {key:'atk', label:'ATK', color:'#EF9A9A', max:190},
+  {key:'def', label:'DEF', color:'#FFD54F', max:230},
+  {key:'spa', label:'SpA', color:'#4FC3F7', max:194},
+  {key:'spd', label:'SpD', color:'#80DEEA', max:230},
+  {key:'spe', label:'SPD', color:'#CE93D8', max:200},
+];
+
+async function showStats(pokemon){
+  // pokemon can be a team/pc instance (has .bs) OR just an id (for dex)
+  let bs=pokemon.bs||null, name=pokemon.name, sprite=pokemon.sprite,
+      types=pokemon.types, level=pokemon.level, moves=pokemon.moves||null,
+      num=pokemon.id, isShiny=pokemon.isShiny, nickname=pokemon.nickname;
+
+  if(!bs){
+    setLoading(true);
+    try{
+      const d=await fetchPoke(num);
+      bs={};
+      d.stats.forEach(s=>{
+        const n=s.stat.name;
+        if(n==='hp')bs.hp=s.base_stat;
+        else if(n==='attack')bs.atk=s.base_stat;
+        else if(n==='defense')bs.def=s.base_stat;
+        else if(n==='special-attack')bs.spa=s.base_stat;
+        else if(n==='special-defense')bs.spd=s.base_stat;
+        else if(n==='speed')bs.spe=s.base_stat;
+      });
+      name=d.name; types=d.types.map(t=>t.type.name);
+      sprite=d.sprites.other?.['official-artwork']?.front_default||d.sprites.front_default;
+    }catch(e){setLoading(false);toast('Could not load stats','#FF6B35');return;}
+    setLoading(false);
+  }
+
+  const tc=TC[types[0]]||'#BCAAA4';
+  const bst=Object.values(bs).reduce((a,b)=>a+b,0);
+
+  // Header
+  document.getElementById('stats-header').style.background=`linear-gradient(135deg,${tc}33,rgba(0,0,0,.4))`;
+  document.getElementById('stats-sprite').src=sprite;
+  document.getElementById('stats-sprite').style.filter=isShiny?'drop-shadow(0 0 14px gold)':'drop-shadow(0 0 10px '+tc+'88)';
+  document.getElementById('stats-name').textContent=(nickname||name)+(isShiny?' ✨':'');
+  document.getElementById('stats-num').textContent=`#${String(num).padStart(4,'0')} · ${name}${level?' · Lv.'+level:''}`;
+  document.getElementById('stats-types').innerHTML=types.map(typeTag).join(' ');
+  document.getElementById('stats-extra').innerHTML=level
+    ?`EXP: ${pokemon.exp||0} / ${expForLv((level||1)+1)}` : '';
+
+  // Stat bars
+  document.getElementById('stats-bars').innerHTML=STAT_META.map(m=>{
+    const val=bs[m.key]||0;
+    const pct=Math.round(val/m.max*100);
+    return`<div style="display:grid;grid-template-columns:34px 1fr 30px;gap:6px;align-items:center;margin-bottom:7px">
+      <div style="font-size:5px;color:rgba(255,255,255,.5);text-align:right">${m.label}</div>
+      <div style="background:rgba(255,255,255,.08);border-radius:4px;height:8px;overflow:hidden">
+        <div style="width:${Math.min(100,pct)}%;height:100%;background:${m.color};border-radius:4px;transition:width .6s ease"></div>
+      </div>
+      <div style="font-size:6px;color:${m.color};font-weight:bold">${val}</div>
+    </div>`;
+  }).join('');
+  document.getElementById('stats-bst').textContent=`Total: ${bst}`;
+
+  // Moves (if team member)
+  const moveSec=document.getElementById('stats-moves-section');
+  if(moves&&moves.length){
+    moveSec.style.display='block';
+    document.getElementById('stats-moves').innerHTML=moves.map(m=>{
+      const mc=TC[m.type]||'#888';
+      return`<span style="background:${mc}22;border:1px solid ${mc}44;color:${mc};font-size:5px;padding:3px 8px;border-radius:8px;text-transform:capitalize">${m.name} ${m.pp}/${m.maxPP}</span>`;
+    }).join('');
+  } else moveSec.style.display='none';
+
+  document.getElementById('stats-overlay').classList.add('open');
+}
+
+function closeStats(){document.getElementById('stats-overlay').classList.remove('open');}
+
+// ── TRAINER CARD ──────────────────────────────────────────────────────────────
+function renderTrainerCard(){
+  if(!G)return;
+  if(!G.trainerName)G.trainerName='Trainer';
+  if(!G.joinDate)G.joinDate=new Date().toDateString();
+  if(!G.bestStreak)G.bestStreak=G.streak||1;
+
+  // Update best streak
+  if(G.streak>G.bestStreak){G.bestStreak=G.streak;saveGame();}
+
+  const badges=(G.badges||[]);
+  const badgeCount=badges.length;
+  const title=badgeCount>=GYMS.length?'🏆 Pokémon Champion':
+    badgeCount>=16?'⭐ Master Trainer':
+    badgeCount>=8?'🌟 Gym Champion':
+    badgeCount>=4?'🔰 Rising Trainer':
+    badgeCount>=1?'🌱 Gym Challenger':'🌿 Pokémon Trainer';
+
+  document.getElementById('tc-name').textContent=G.trainerName;
+  document.getElementById('tc-title').textContent=title;
+  document.getElementById('tc-join-date').textContent=G.joinDate;
+
+  // Lead sprite
+  const lead=G.team[0];
+  if(lead){
+    document.getElementById('tc-lead-img').src=lead.sprite;
+    document.getElementById('tc-lead-img').alt=lead.name;
+  }else{
+    document.getElementById('tc-lead-sprite').innerHTML='<div style="font-size:36px">👤</div>';
+  }
+
+  // Badges
+  document.getElementById('tc-badges').innerHTML=badges.length
+    ?GYMS.filter(g=>badges.includes(g.id)).map(g=>`<div style="text-align:center;flex-shrink:0">
+        <div style="font-size:22px">${g.badge}</div>
+        <div style="font-size:4px;color:var(--faint);margin-top:1px;text-transform:capitalize">${g.id}</div>
+      </div>`).join('')
+    :'<div style="color:var(--faint);font-size:6px;margin:auto">No badges yet — challenge a gym!</div>';
+
+  // Stats grid
+  const statBox=(id,val,lbl)=>{
+    const el=document.getElementById(id);
+    if(el)el.innerHTML=`<span class="tc-stat-val">${val}</span><span class="tc-stat-lbl">${lbl}</span>`;
+  };
+  statBox('tc-s-caught', G.dexCaught.length, 'Pokémon Caught');
+  statBox('tc-s-wins',   G.wins,             'Battles Won');
+  statBox('tc-s-streak', G.bestStreak+'d',   'Best Streak');
+  statBox('tc-s-dex',    `${G.dexCaught.length}/1025`, 'Pokédex');
+  statBox('tc-s-coins',  G.coins+'💰',       'Coins');
+  statBox('tc-s-trades', G.wonderTradeCount||0,'Wonder Trades');
+
+  // Team sprites
+  document.getElementById('tc-team').innerHTML=G.team.length
+    ?G.team.map(p=>`<div style="text-align:center" onclick="showStats(G.team[${G.team.indexOf(p)}])">
+        <img src="${p.sprite}" style="width:46px;height:46px;object-fit:contain;cursor:pointer" title="${p.nickname||p.name}">
+        <div style="font-size:5px;color:var(--faint);text-transform:capitalize;margin-top:2px">${p.nickname||p.name}</div>
+      </div>`).join('')
+    :'<div style="color:var(--faint);font-size:6px;margin:auto">No team yet</div>';
+}
+
+function editTrainerName(){
+  document.getElementById('nickname-pokemon-name').textContent='Your trainer name:';
+  document.getElementById('nickname-input').value=G.trainerName||'Trainer';
+  document.getElementById('nickname-input').placeholder='Enter your name (max 12)';
+  // Override submit to save as trainer name
+  window._editingTrainerName=true;
+  document.getElementById('nickname-overlay').classList.add('open');
+  setTimeout(()=>document.getElementById('nickname-input').focus(),150);
+}
+
+// Patch submitNickname to handle trainer name editing
+const _origSubmitNickname=submitNickname;
+window.submitNickname=function(remove){
+  if(window._editingTrainerName){
+    window._editingTrainerName=false;
+    if(!remove){
+      const nn=document.getElementById('nickname-input').value.trim().slice(0,12);
+      G.trainerName=nn||'Trainer';
+      saveGame();
+      toast(`Trainer name set to "${G.trainerName}"! 👤`,'#4FC3F7');
+    }
+    closeNicknameOverlay();
+    renderTrainerCard();
+    return;
+  }
+  _origSubmitNickname(remove);
+};
 
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
