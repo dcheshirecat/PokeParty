@@ -77,6 +77,15 @@
   </div>
 </div>
 
+
+<!-- Items overlay -->
+<div class="overlay" id="items-overlay" onclick="if(event.target===this)closeItemsMenu()">
+  <div class="overlay-panel">
+    <div style="font-size:8px;color:var(--gold);margin-bottom:12px">🎒 Use Item</div>
+    <div id="items-list"></div>
+    <button class="btn btn-ghost" style="width:100%;margin-top:8px" onclick="closeItemsMenu()">Cancel</button>
+  </div>
+</div>
 <!-- Switch overlay -->
 <div class="overlay" id="switch-overlay" onclick="if(event.target===this)hideSwitchMenu()">
   <div class="overlay-panel">
@@ -235,11 +244,11 @@
     <!-- Actions -->
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:5px">
       <button id="b-switch-btn" class="btn btn-ghost btn-sm" onclick="showSwitchMenu()">🔄<br>Switch</button>
-      <button id="b-item-btn"   class="btn btn-ghost btn-sm" onclick="usePotion()">💊<br>Potion</button>
+      <button id="b-item-btn"   class="btn btn-ghost btn-sm" onclick="showItemsMenu()">🎒<br>Items</button>
       <button id="b-catch-btn"  class="btn btn-ghost btn-sm" onclick="tryCatch()">⚪<br>Ball</button>
       <button id="b-run-btn"    class="btn btn-ghost btn-sm" onclick="runAway()">💨<br>Run</button>
     </div>
-    <div style="text-align:right;margin-top:5px;font-size:6px;color:var(--faint)">⚪<span id="b-balls">0</span> 💊<span id="b-potions">0</span></div>
+    <div style="text-align:right;margin-top:5px;font-size:6px;color:var(--faint)">⚪<span id="b-balls">0</span> 💊<span id="b-potions">0</span> 💫<span id="b-revives">0</span></div>
 
   </div>
 </div>
@@ -716,6 +725,7 @@ function goGyms(){showScreen('s-gyms');renderGyms();}
 function goTrainerCard(){showScreen('s-trainer-card');renderTrainerCard();}
 function battleGoHome(){
   document.getElementById('b-end-overlay').style.display='none';
+  saveGame(); // always persist before leaving battle
   if(B)B=null;goWorld();
 }
 function battleAgain(){
@@ -893,7 +903,10 @@ function confirmDelete(slot){
 // ── BATTLE RENDER ─────────────────────────────────────────────────────────────
 function renderBattle(){
   if(!B)return;
-  const en=B.enemyTeam[B.enemyActive],pl=B.refs[B.playerActive];
+  // Guard: when last enemy faints, enemyActive goes past array end — use last valid enemy
+  const en=B.enemyTeam[Math.min(B.enemyActive,B.enemyTeam.length-1)];
+  const pl=B.refs[B.playerActive];
+  if(!en||!pl)return;  // safety — never crash
   const dis=B.phase==='animating'||B.phase==='ended';
   const ended=B.phase==='ended';
   const ep=Math.max(0,Math.round(en.hp/en.maxHp*100));
@@ -941,6 +954,12 @@ function renderBattle(){
   document.getElementById('b-log').textContent=B.log[B.log.length-1]||'';
   document.getElementById('b-balls').textContent=G.balls;
   document.getElementById('b-potions').textContent=G.potions;
+  document.getElementById('b-revives').textContent=G.revives||0;
+  // Item button is usable when: have potion + not full HP, OR have revive + someone fainted
+  const hasFainted=B.refs.some((p,i)=>i!==B.playerActive&&p.hp<=0&&p.maxHp>0);
+  const itemUsable=(G.potions>0&&pl.hp<pl.maxHp)||(G.revives>0&&hasFainted);
+  const itemBtn=document.getElementById('b-item-btn');
+  if(itemBtn){itemBtn.disabled=dis||!itemUsable;itemBtn.style.opacity=(!dis&&itemUsable)?'1':'0.4';}
   // ★ FIXED END OVERLAY — always on screen regardless of scroll ★
   document.getElementById('b-end-overlay').style.display=ended?'block':'none';
   document.getElementById('b-moves').innerHTML=ended?'':pl.moves.map((m,i)=>{
@@ -1037,6 +1056,7 @@ async function doLevelUp(pokemon){
   const old=pokemon.maxHp;pokemon.level++;refreshStats(pokemon);
   pokemon.hp=Math.min(pokemon.maxHp,pokemon.hp+(pokemon.maxHp-old));
   SFX.levelup();B.log.push(`✨ ${pokemon.name} grew to Lv.${pokemon.level}!`);
+  saveGame(); // persist level immediately — don't wait for battleWon
   renderBattle();await delay(1300);
   if(pokemon.evolvesTo&&pokemon.level>=pokemon.evolvesAtLevel)await doEvolveBattle(pokemon);
 }
@@ -2017,6 +2037,83 @@ window.submitNickname=function(remove){
   _origSubmitNickname(remove);
 };
 
+
+
+// ── ITEMS MENU ────────────────────────────────────────────────────────────────
+function showItemsMenu(){
+  if(B.phase!=='choose')return;
+  const pl=B.refs[B.playerActive];
+  const fainted=B.refs.filter((p,i)=>i!==B.playerActive&&p.hp<=0&&p.maxHp>0);
+  const rows=[];
+
+  // Potion
+  if(G.potions>0&&pl.hp<pl.maxHp){
+    rows.push(`<button class="btn" onclick="usePotion();closeItemsMenu()"
+      style="width:100%;margin-bottom:8px;background:rgba(129,199,132,.1);border:1px solid rgba(129,199,132,.3);
+             color:#81C784;padding:12px;font-size:7px;border-radius:10px;text-align:left;display:flex;align-items:center;gap:10px">
+      <span style="font-size:22px">💊</span>
+      <span>Potion (x${G.potions})<br><span style="font-size:5px;opacity:.7">Restores 50 HP to active Pokémon</span></span>
+    </button>`);
+  } else if(G.potions>0){
+    rows.push(`<div style="opacity:.4;padding:10px;font-size:6px;color:var(--muted);border:1px dashed rgba(255,255,255,.1);border-radius:10px;margin-bottom:8px">
+      💊 Potion (x${G.potions}) — HP is already full</div>`);
+  } else {
+    rows.push(`<div style="opacity:.4;padding:10px;font-size:6px;color:var(--muted);border:1px dashed rgba(255,255,255,.1);border-radius:10px;margin-bottom:8px">
+      💊 No Potions left</div>`);
+  }
+
+  // Revive — one button per fainted team member
+  if(G.revives>0&&fainted.length>0){
+    fainted.forEach(p=>{
+      const idx=B.refs.indexOf(p);
+      rows.push(`<button class="btn" onclick="useRevive(${idx});closeItemsMenu()"
+        style="width:100%;margin-bottom:8px;background:rgba(206,147,216,.1);border:1px solid rgba(206,147,216,.3);
+               color:#CE93D8;padding:12px;font-size:7px;border-radius:10px;text-align:left;display:flex;align-items:center;gap:10px">
+        <span style="font-size:22px">💫</span>
+        <div><div style="text-transform:capitalize">Revive ${p.nickname||p.name}</div>
+        <div style="font-size:5px;opacity:.7">Restores to 50% HP · Revives: x${G.revives}</div></div>
+      </button>`);
+    });
+  } else if(G.revives>0){
+    rows.push(`<div style="opacity:.4;padding:10px;font-size:6px;color:var(--muted);border:1px dashed rgba(255,255,255,.1);border-radius:10px;margin-bottom:8px">
+      💫 Revive (x${G.revives}) — No fainted Pokémon to revive</div>`);
+  } else {
+    rows.push(`<div style="opacity:.4;padding:10px;font-size:6px;color:var(--muted);border:1px dashed rgba(255,255,255,.1);border-radius:10px;margin-bottom:8px">
+      💫 No Revives left</div>`);
+  }
+
+  if(rows.length===0){
+    rows.push(`<div style="text-align:center;color:var(--faint);font-size:7px;padding:16px">
+      No usable items right now</div>`);
+  }
+
+  document.getElementById('items-list').innerHTML=rows.join('');
+  document.getElementById('items-overlay').classList.add('open');
+}
+function closeItemsMenu(){document.getElementById('items-overlay').classList.remove('open');}
+
+async function useRevive(idx){
+  if(B.phase!=='choose')return;
+  if(G.revives<=0){toast('No Revives left!','#FF6B35');return;}
+  const target=B.refs[idx];
+  if(!target||target.hp>0){toast('That Pokémon is not fainted!','#FF6B35');return;}
+  B.phase='animating';
+  G.revives--;
+  target.hp=Math.max(1,Math.floor(target.maxHp*.5));
+  target.status=null;
+  B.log.push(`💫 Used Revive on ${target.nickname||target.name}! (${target.hp} HP restored)`);
+  SFX.levelup();
+  renderBattle();
+  await delay(800);
+  // Enemy gets a free move after using an item
+  const pl=B.refs[B.playerActive];
+  const en=B.enemyTeam[B.enemyActive];
+  await execMove(en,pickEnemy(en,pl),pl);
+  if(pl.hp<=0){await playerFaint();return;}
+  B.phase='choose';
+  renderBattle();
+  saveGame();
+}
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded',()=>{showScreen('s-title');renderTitle();});
