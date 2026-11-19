@@ -2,8 +2,8 @@
 // ── POKÉDEX ─────────────────────────────────────────────────────────────────
 
 UI.Screens.dex = {
-  title: '📖 Pokédex',
-  tab: 'dex',
+  title: () => `<button class="back-btn" data-act="go" data-arg="more" aria-label="Back">‹</button>📖 Pokédex`,
+  tab: 'more',
   render(p) {
     const filter = p.filter || 'all';
     const ids = Object.keys(G.dex).map(Number).sort((a, b) => a - b);

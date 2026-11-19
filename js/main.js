@@ -19,9 +19,11 @@ document.addEventListener('click', e => {
 
 // The battle screen lives in its own DOM tree
 UI.Screens.battle = {root: 'battle'};
+UI.Screens.duel = {root: 'duel'};
 
 window.addEventListener('DOMContentLoaded', () => {
   Battle.init();
+  Duel.init();
   UI.go('title');
 });
 

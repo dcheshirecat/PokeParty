@@ -38,12 +38,27 @@
     <div id="b-result" class="b-result"></div>
   </section>
 
+  <!-- Card duel screen -->
+  <section id="duel" class="screen">
+    <div class="d-head"><span id="d-turn"></span><button class="icon-btn" data-d="menu" aria-label="Duel menu">☰</button></div>
+    <div class="d-info" id="d-opp-info"></div>
+    <div class="d-bench" id="d-opp-bench"></div>
+    <div class="d-active" id="d-opp-active"></div>
+    <div class="d-log" id="d-log"></div>
+    <div class="d-active" id="d-my-active"></div>
+    <div class="d-bench" id="d-my-bench"></div>
+    <div class="d-info d-mine" id="d-my-info"></div>
+    <div class="d-hand" id="d-hand"></div>
+    <div id="d-coin" class="coin"></div>
+    <div id="d-result" class="b-result"></div>
+  </section>
+
   <nav id="tabbar" class="tabbar hidden">
     <button class="tab" data-act="go" data-arg="explore"><span>🗺️</span>Explore</button>
     <button class="tab" data-act="go" data-arg="team"><span>🎒</span>Team</button>
+    <button class="tab" data-act="go" data-arg="cards"><span>🃏</span>Cards</button>
     <button class="tab" data-act="go" data-arg="gyms"><span>🏟️</span>Gyms</button>
     <button class="tab" data-act="go" data-arg="shop"><span>🛒</span>Shop</button>
-    <button class="tab" data-act="go" data-arg="dex"><span>📖</span>Dex</button>
     <button class="tab" data-act="go" data-arg="more"><span>☰</span>More</button>
   </nav>
 </div>
@@ -52,7 +67,7 @@
 <div id="toasts"></div>
 <div id="loading"><div class="spinner"></div><div id="loading-text">Loading…</div></div>
 
-<!-- Load order matters: data → services → engine → state → UI → features → boot -->
+<!-- Load order matters: data → services → engine → state → UI → features → card game → screens → boot -->
 <script src="js/data.js"></script>
 <script src="js/api.js"></script>
 <script src="js/engine.js"></script>
@@ -60,12 +75,20 @@
 <script src="js/state.js"></script>
 <script src="js/factory.js"></script>
 <script src="js/battle.js"></script>
+<script src="js/tcg/data-species.js"></script>
+<script src="js/tcg/cards.js"></script>
+<script src="js/tcg/engine.js"></script>
+<script src="js/tcg/ai.js"></script>
+<script src="js/tcg/collection.js"></script>
+<script src="js/tcg/cardui.js"></script>
+<script src="js/tcg/duel.js"></script>
 <script src="js/screens/home.js"></script>
 <script src="js/screens/team.js"></script>
 <script src="js/screens/shop.js"></script>
 <script src="js/screens/dex.js"></script>
 <script src="js/screens/gyms.js"></script>
 <script src="js/screens/more.js"></script>
+<script src="js/screens/cards.js"></script>
 <script src="js/main.js"></script>
 </body>
 </html>

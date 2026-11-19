@@ -4,6 +4,8 @@ A fan-made, mobile-first Pokémon adventure that runs in any browser and builds 
 
 Catch Pokémon across 12 areas, battle generated trainers, earn 23 Gym badges, take on the Elite Four and Champion back to back, and hunt shinies. It also has a Pokédex, Wonder Trade, a Daycare with eggs, daily quests, mystery gifts and achievements.
 
+It also includes a **trading card game** (the Cards tab): collect cards from booster packs, keep a binder, build 60-card decks, and duel an AI ladder and the Gym Leaders using standard TCG rules.
+
 ## Play
 
 Open `index.html` in a browser. There is no build step and nothing to install. Pokémon data and sprites come from [PokéAPI](https://pokeapi.co). If pokeapi.co is unreachable, the game falls back to PokéAPI's static mirror on GitHub.
@@ -24,7 +26,15 @@ js/factory.js         builds wild/trainer/gym Pokémon; EXP, level-ups, move lea
 js/battle.js          battle flow and animation
 js/screens/*.js       one file per screen group (home, team, shop, dex, gyms, more)
 js/main.js            boot and click routing
-tests/engine.test.js  engine unit tests
+js/tcg/data-species.js  GENERATED card source data (run tools/build_tcg_data.py)
+js/tcg/cards.js       card sets, card generation, trainer cards, packs, deck builder
+js/tcg/engine.js      TCG rules engine
+js/tcg/ai.js          card-duel AI
+js/tcg/collection.js  owned cards, packs, decks, trading, duel ladder
+js/tcg/cardui.js      card rendering (full card, mini card, in-play card)
+js/tcg/duel.js        duel board screen
+tools/build_tcg_data.py  rebuilds js/tcg/data-species.js from PokéAPI CSV data
+tests/*.test.js       engine and card-game tests
 ```
 
 Scripts are plain `<script>` files loaded in order (no modules), so they work from `file://` inside the Android WebView. Buttons use `data-act="name"` attributes, which `main.js` routes to `Act.name(...)` handlers.
@@ -39,6 +49,16 @@ Scripts are plain `<script>` files loaded in order (no modules), so they work fr
 - Trainer AI scores every move. Gym Leaders and the League pick strong moves almost every turn and send out good type matchups.
 - Catch chance uses each species' real catch rate, current HP, status and ball type.
 - Pokémon learn moves on level-up (with a prompt to forget one when they already know four). They evolve by level, by stones or other items, or with a Link Cable for trade evolutions.
+
+## Card game
+
+**Rules.** Decks are 60 cards with at most 4 copies of any card (basic Energy is unlimited) and at least one Basic Pokémon. Each player has 6 Prize cards, an Active Pokémon and up to 5 on the Bench. On your turn you may attach one Energy, play any number of Items and one Supporter, and retreat once. Evolution follows Basic → Stage 1 → Stage 2, and Rare Candy skips Stage 1. Weakness doubles damage and Resistance reduces it by 30. The special conditions are Asleep, Paralyzed, Confused, Poisoned and Burned, resolved during Pokémon Checkup between turns. The player going first can't attack or play a Supporter on their first turn. You win by taking all your Prize cards, leaving the opponent with no Pokémon in play, or when they can't draw.
+
+**Cards.** There are three sets: Kanto Classics, Johto Journey and Hoenn Horizons (Pokémon #1–386 plus Trainer cards). Each Pokémon's HP, energy type, weakness, resistance, retreat cost and two attacks are derived from its real stats and level-up moves, so cards differ by species. Rarities are Common, Uncommon, Rare, Holo Rare, Shiny Secret, and Gym Leader promos.
+
+**Collecting.** Packs cost 600 coins and contain 5 commons, 3 uncommons, a bonus card and a guaranteed rare. You can sell copies beyond 4, or trade 5 duplicates up to the next rarity.
+
+To change how cards are generated (HP, damage, rarity), edit `js/tcg/cards.js`. To change which species and moves exist, edit `tools/build_tcg_data.py` and run it.
 
 ## Tests
 

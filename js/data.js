@@ -233,6 +233,12 @@ const ACHIEVEMENTS = [
   {id:'champion',    icon:'🏆', name:'Champion!',       desc:'Conquer the Pokémon League',         check:g=>g.league.champion},
   {id:'legend',      icon:'🏔️', name:'Living Legend',   desc:'Defeat the Legend',                 check:g=>g.league.legend},
   {id:'routes',      icon:'🗺️', name:'Explorer',        desc:'Unlock every route',                check:g=>g.badges.length>=ROUTES[ROUTES.length-1].badges},
+  {id:'tcg_pack',    icon:'📦', name:'Pack Rat',        desc:'Open your first booster pack',       check:g=>(g.tcg?.stats.packs||0)>=1},
+  {id:'tcg_100',     icon:'🎴', name:'Card Collector',  desc:'Own 100 different cards',            check:g=>Object.keys(g.tcg?.cards||{}).length>=100},
+  {id:'tcg_set',     icon:'📒', name:'Set Complete',    desc:'Complete a card set in your binder',  check:g=>!!g.tcg&&typeof Cards!=='undefined'&&Cards.SETS.some(s=>Cards.BY_SET[s.code].every(c=>g.tcg.cards[c.id]))},
+  {id:'tcg_win',     icon:'🃏', name:'Duelist',         desc:'Win a card duel',                     check:g=>(g.tcg?.stats.wins||0)>=1},
+  {id:'tcg_ladder',  icon:'👑', name:'Card Grandmaster',desc:'Beat every duelist on the ladder',    check:g=>(g.tcg?.ladder||[]).length>=8},
+  {id:'tcg_secret',  icon:'✦',  name:'Secret Shine',    desc:'Pull a Shiny Secret rare',            check:g=>Object.keys(g.tcg?.cards||{}).some(id=>id.endsWith('S'))},
   {id:'quests',      icon:'📋', name:'Quest Master',    desc:'Finish all daily quests in one day', check:g=>g.quests.list.length>0&&g.quests.list.every(q=>q.done)},
 ];
 function allMons(g){return g.team.concat(g.pc, g.daycare.slots.filter(Boolean));}

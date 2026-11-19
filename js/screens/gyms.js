@@ -16,8 +16,9 @@ UI.Screens.gyms = {
       return `<div class="gym-row ${earned ? 'earned' : next ? 'next' : 'locked'}" style="--tc:${TYPE_COLOR[g.type]}">
         <div class="gym-badge">${locked ? '🔒' : g.badge}</div>
         <div class="grow"><b>${g.name}</b><div class="muted small">${g.leader} · ${UI.typeBadge(g.type)} · ${g.team.length} Pokémon up to Lv.${top}</div></div>
-        ${next ? `<button class="btn btn-primary btn-sm" data-act="gym" data-arg="${i}">Challenge</button>`
+        <div class="gym-btns">${next ? `<button class="btn btn-primary btn-sm" data-act="gym" data-arg="${i}">Challenge</button>`
           : earned ? `<button class="btn btn-ghost btn-sm" data-act="gym" data-arg="${i}" data-rematch="1">Rematch</button>` : ''}
+        ${!locked && G.tcg?.started ? `<button class="btn btn-ghost btn-sm" data-act="gymDuel" data-arg="${i}" title="Card duel">🃏 Card duel${G.tcg.gymDuels.includes(g.id) ? ' ✓' : ''}</button>` : ''}</div>
       </div>`;
     };
 

@@ -14,6 +14,7 @@ UI.Screens.more = {
     const item = (arg, icon, title, sub, badge = '') => `<button class="menu-item" data-act="go" data-arg="${arg}">
       <span class="mi-icon">${icon}</span><span class="grow"><b>${title}</b><small>${sub}</small></span>${badge}<span class="chev">›</span></button>`;
     return `<div class="menu">
+      ${item('dex', '📖', 'Pokédex', `${caughtCount(G)} caught · ${Object.keys(G.dex).length} seen`)}
       ${item('daily', '📅', 'Daily rewards', `Quests ${qDone}/${G.quests.list.length} · streak ${G.streak.count} days`, gift ? '<span class="dot-badge">🎁</span>' : '')}
       ${item('wonder', '🔄', 'Wonder Trade', 'Trade for a surprise Pokémon')}
       ${item('daycare', '🥚', 'Daycare', egg ? (egg.ready ? 'Your egg is ready to hatch!' : 'An egg is incubating…') : 'Leave two Pokémon to find an egg', egg?.ready ? '<span class="dot-badge">🐣</span>' : '')}
