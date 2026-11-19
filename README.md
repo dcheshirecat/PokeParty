@@ -65,3 +65,20 @@ To change how cards are generated (HP, damage, rarity), edit `js/tcg/cards.js`. 
 ```
 node --test tests/*.test.js
 ```
+
+## Signing the APK
+
+By default, each CI build signs the APK with a newly generated key. Android then refuses to install the new build over the old one, so you have to uninstall first. To keep one key across builds, create a keystore once:
+
+```
+keytool -genkeypair -alias pokemon-key -keyalg RSA -keysize 2048 -validity 10000 -keystore release.keystore
+base64 -w0 release.keystore      # on macOS: base64 -i release.keystore
+```
+
+Then add these repository secrets (Settings → Secrets and variables → Actions):
+
+- `KEYSTORE_BASE64` — the base64 output
+- `KEYSTORE_PASS`, `KEY_PASS` — the passwords you chose
+- `KEY_ALIAS` — `pokemon-key`, unless you used a different alias
+
+Keep `release.keystore` somewhere safe and never commit it.

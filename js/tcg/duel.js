@@ -117,7 +117,7 @@ const Duel = (() => {
       D.busy = false;
       render();
       if (D.s.winner !== null) return finish();
-      UI.toast('Your turn!', 'info');
+      if (!$('#toasts .toast:not(.out)')) UI.toast('Your turn!', 'info');
     }
   }
 

@@ -686,4 +686,18 @@ small { font-size: .8em; }
 .d-loglist p { font-size: .85rem; color: var(--muted); padding: 3px 0; border-bottom: 1px solid var(--line); }
 .rules p, .rules li { margin: 6px 0; color: var(--text); }
 .rules ul { padding-left: 18px; }
-@media (max-height: 700px) { .ip.big { width: min(24vw, 92px); } .d-hand { min-height: 96px; } .d-hand .mini-card { width: 64px; } }
+@media (max-height: 760px) {
+  #duel { gap: 3px; padding-top: 4px; }
+  .d-bench .ip { aspect-ratio: auto; height: 62px; }
+  .d-bench .ip img { height: 42%; }
+  .d-bench .ip-energy { min-height: 0; }
+  .ip.big { width: 80px; }
+  .ip.big.empty { height: 102px; }
+  .ip.big .ip-name, .ip.big .ip-hp { font-size: .68rem; }
+  .ip.big .ip-energy { font-size: 1rem; }
+  .d-log { min-height: 24px; font-size: .68rem; padding: 2px 6px; }
+  .d-info { padding: 2px 8px; font-size: .72rem; }
+  .d-hand { min-height: 84px; padding-top: 2px; }
+  .d-hand .mini-card { width: 58px; }
+  .d-hand .mc-name { font-size: .55rem; }
+}
