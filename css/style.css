@@ -94,6 +94,8 @@ small { font-size: .8em; }
 .seg { display: flex; background: rgba(255, 255, 255, .05); border-radius: 12px; padding: 4px; gap: 4px; margin: 4px 0 12px; }
 .seg button { flex: 1; padding: 8px; border-radius: 9px; font-family: var(--display); color: var(--muted); }
 .seg button.on { background: var(--surface2); color: var(--text); }
+.seg-wrap { display: grid; grid-template-columns: repeat(5, 1fr); }
+.seg-wrap button { padding: 7px 2px; font-size: .78rem; white-space: nowrap; }
 .input { width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line); background: rgba(255, 255, 255, .05); color: var(--text); font: inherit; outline: none; margin-bottom: 12px; }
 .input:focus { border-color: var(--blue); }
 

@@ -9,7 +9,7 @@ Change MAX_ID to cover more generations.
 import csv, io, json, os, sys, urllib.request
 from collections import defaultdict
 
-MAX_ID = 386  # Gen 1–3
+MAX_ID = 1025  # Gen 1–9
 BASE = 'https://raw.githubusercontent.com/PokeAPI/pokeapi/master/data/v2/csv/'
 EN = '9'
 TYPES = ['', 'normal', 'fighting', 'flying', 'poison', 'ground', 'rock', 'bug', 'ghost', 'steel',
@@ -55,11 +55,17 @@ def main():
         if pid <= MAX_ID and r['pokemon_move_method_id'] == '1':
             learn[pid].append((int(r['version_group_id']), int(r['move_id']), int(r['level'] or 0)))
 
+    # A "baby" added in a later generation than its evolution (Pichu → Pikachu)
+    # doesn't count as a stage, as in the real TCG. Babies that debuted with
+    # their evolution (Riolu → Lucario, Toxel → Toxtricity) do.
+    def counts(parent, child):
+        return parent['is_baby'] != '1' or parent['generation_id'] == child['generation_id']
+
     def stage(pid):
         s, cur = 0, species[pid]
         while cur['evolves_from_species_id']:
             parent = species.get(int(cur['evolves_from_species_id']))
-            if not parent or parent['is_baby'] == '1':
+            if not parent or not counts(parent, cur):
                 break
             s += 1
             cur = parent
@@ -67,7 +73,7 @@ def main():
 
     def evolves_from(pid):
         f = species[pid]['evolves_from_species_id']
-        if not f or int(f) > MAX_ID or species[int(f)]['is_baby'] == '1':
+        if not f or int(f) > MAX_ID or not counts(species[int(f)], species[pid]):
             return 0
         return int(f)
 

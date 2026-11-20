@@ -171,7 +171,7 @@ UI.Screens.binder = {
   title: () => cardsBack('📒 Binder'), tab: 'cards',
   render(p) {
     const tab = p.set || 'KAN';
-    const seg = `<div class="seg">${Cards.SETS.map(st => `<button class="${tab === st.code ? 'on' : ''}" data-act="go" data-arg="binder" data-set="${st.code}">${st.icon} ${st.code}</button>`).join('')}
+    const seg = `<div class="seg seg-wrap">${Cards.SETS.map(st => `<button class="${tab === st.code ? 'on' : ''}" data-act="go" data-arg="binder" data-set="${st.code}">${st.icon} ${st.code}</button>`).join('')}
       <button class="${tab === 'SPECIAL' ? 'on' : ''}" data-act="go" data-arg="binder" data-set="SPECIAL">✦ Special</button></div>`;
     if (tab === 'SPECIAL') {
       const special = Object.keys(Collection.T().cards).map(Cards.get).filter(c => c && (c.shiny || c.set === 'PR'));

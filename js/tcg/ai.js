@@ -67,6 +67,12 @@ const TCGAI = (() => {
           };
           return insts.reduce((b, x, i) => score(x) > score(insts[b]) ? i : b, 0);
         }
+        if (ctx === 'eswitch-from') { // take from a benched Pokémon with surplus, never from a ready Active
+          const a = s.players[pi].active;
+          const k = insts.findIndex(x => x !== a);
+          return k >= 0 ? k : 0;
+        }
+        if (ctx === 'eswitch-to') { const a = s.players[pi].active; const k = insts.indexOf(a); return k >= 0 ? k : 0; }
         if (ctx === 'switch') return insts.reduce((b, x, i) => value(x) - x.dmg > value(insts[b]) - insts[b].dmg ? i : b, 0);
         return insts.reduce((b, x, i) => value(x) > value(insts[b]) ? i : b, 0);
       },
@@ -92,6 +98,7 @@ const TCGAI = (() => {
     };
     if (s.winner !== null) return;
 
+    const a = () => P.active;
     const benchAll = async () => {
       for (let k; (k = handIdx(c => T.isBasic(c))) >= 0 && P.bench.length < T.BENCH;) { T.playBasic(s, pi, k, myIO); await pause(); }
     };
@@ -113,11 +120,17 @@ const TCGAI = (() => {
     if (!P.hand.some(c => c.kind === 'energy')) { await play('energy-search') || await play('energy-retrieval'); }
     if (P.hand.length <= 3) await play('professors-notes') || await play('pep-talk') || await play('helpful-friend');
     else if (P.hand.length <= 6) await play('helpful-friend') || await play('pep-talk');
+    if (!P.hand.some(c => c.kind === 'pokemon' && c.stage > 0) && T.inPlay(P).some(i => i.card.stage < 2)) await play('evolution-incense');
+    if (!P.supporterDone && P.hand.length <= 3 && O.hand.length >= 6) await play('fresh-start');
     // 3. Develop again with the new cards
     await benchAll(); await evolveAll();
+    // Energy Switch: pull energy onto the Active if that turns on an attack
+    if (a() && !a().card.attacks.some(x => T.canPay(x.cost, a().energy)) && P.bench.some(b => b.energy.length)) {
+      const need = missing(strongest(a().card).cost, a().energy);
+      if (need.length === 1 && P.bench.some(b => b.energy.some(e => need[0] === 'Colorless' || e.type === need[0]))) await play('energy-switch');
+    }
 
     // 5. Healing / conditions
-    const a = () => P.active;
     if (a() && (a().sp || a().psn || a().brn) && a().sp !== 'cnf') await play('full-heal');
     if (a() && a().dmg >= 40 && T.hpLeft(a()) <= 60) await play('super-potion') || await play('potion');
     if (a() && a().dmg >= a().card.hp / 2 && a().energy.length <= 1) await play('pokemon-nurse');

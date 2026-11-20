@@ -185,6 +185,9 @@ const TCG = (() => {
       case 'call-out': return O.bench.length > 0;
       case 'poke-ball': case 'great-ball': case 'energy-search': return P.deck.length > 0;
       case 'nest-ball': return P.bench.length < BENCH && P.deck.some(isBasic);
+      case 'evolution-incense': return P.deck.some(c => c.kind === 'pokemon' && c.stage > 0);
+      case 'energy-switch': return inPlay(P).length > 1 && inPlay(P).some(i => i.energy.length);
+      case 'fresh-start': return P.deck.length + P.hand.length > 0;
       case 'professors-notes': case 'helpful-friend': case 'pep-talk': return P.deck.length > 0;
     }
     return true;
@@ -278,6 +281,24 @@ const TCG = (() => {
         if (k !== null && k !== undefined) { P.deck.splice(P.deck.indexOf(opts[k]), 1); P.bench.push(inst(opts[k], s.turn)); say(s, io, `${opts[k].name} is placed on the Bench.`); }
         shuffle(P.deck, s.rng); break;
       }
+      case 'evolution-incense': await search(x => x.kind === 'pokemon' && x.stage > 0, 'Take an Evolution Pokémon', 'evolution'); break;
+      case 'energy-switch': {
+        const from = inPlay(P).filter(i => i.energy.length);
+        const fi = from.length === 1 ? 0 : await io.pickInst(pi, 'Move Energy from…', from, false, 'eswitch-from');
+        const src = from[fi ?? 0];
+        const to = inPlay(P).filter(i => i !== src);
+        const ti = to.length === 1 ? 0 : await io.pickInst(pi, 'Move it to…', to, false, 'eswitch-to');
+        const dst = to[ti ?? 0];
+        const ei = src.energy.length === 1 ? 0 : await io.pickCard(pi, 'Which Energy?', src.energy, false, 'energy');
+        const [e] = src.energy.splice(ei ?? 0, 1);
+        dst.energy.push(e);
+        say(s, io, `${e.name} moves from ${src.card.name} to ${dst.card.name}.`);
+        break;
+      }
+      case 'fresh-start':
+        for (const [k, Q] of s.players.entries()) { Q.deck = shuffle(Q.deck.concat(Q.hand), s.rng); Q.hand = []; draw(s, k, 4); }
+        say(s, io, 'Both players shuffle their hands away and draw 4 cards.');
+        break;
       case 'energy-search': await search(x => x.kind === 'energy', 'Take a basic Energy', 'energy'); break;
       case 'energy-retrieval': {
         for (let n = 0; n < 2; n++) {

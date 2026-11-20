@@ -13,8 +13,8 @@ const {Cards, TCG, TCGAI} = vm.runInContext('({Cards, TCG, TCGAI})', ctx);
 
 function seeded(seed) { return () => (seed = (seed * 16807) % 2147483647) / 2147483647; }
 
-test('three sets with Pokémon and Trainer cards', () => {
-  assert.equal(Cards.SETS.length, 3);
+test('nine sets with Pokémon and Trainer cards', () => {
+  assert.equal(Cards.SETS.length, 9);
   for (const set of Cards.SETS) {
     const list = Cards.BY_SET[set.code];
     assert.ok(list.some(c => c.kind === 'trainer'));
@@ -95,4 +95,17 @@ test('AI vs AI games always finish and conserve cards', async () => {
     }
     assert.notEqual(s.winner, null, `game ${g} did not finish`);
   }
+});
+
+test('reprinted Trainer cards share the 4-copy limit by name', () => {
+  for (let i = 0; i < 20; i++) {
+    const d = Cards.buildDeck({types: [Cards.BASIC_ENERGY[i % 8]], quality: i / 20, rng: seeded(50 + i)});
+    assert.deepEqual([...Cards.validate(d)], [], `deck ${i}`);
+  }
+});
+
+test('later-generation baby rules match the TCG', () => {
+  assert.equal(Cards.byName('Pikachu').stage, 0);   // Pichu came later
+  assert.equal(Cards.byName('Lucario').stage, 1);   // Riolu debuted with Lucario
+  assert.equal(Cards.byName('Lucario').from, 'Riolu');
 });

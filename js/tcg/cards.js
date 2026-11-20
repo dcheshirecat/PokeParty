@@ -35,6 +35,19 @@ const Cards = (() => {
       trainers:['super-potion', 'great-ball', 'helpful-friend', 'full-heal', 'rare-candy']},
     {code:'HOE', name:'Hoenn Horizons', range:[252, 386], color:'#2e86de', icon:'🔵',
       trainers:['energy-retrieval', 'pep-talk', 'call-out', 'pokemon-nurse']},
+    // Trainer cards are reprinted across later sets, as in the real game
+    {code:'SIN', name:'Sinnoh Summit',    range:[387, 493],  color:'#8e7cc3', icon:'💎',
+      trainers:['evolution-incense', 'potion', 'professors-notes', 'switch']},
+    {code:'UNO', name:'Unova Lights',     range:[494, 649],  color:'#4a4a4a', icon:'⚫',
+      trainers:['energy-switch', 'nest-ball', 'helpful-friend', 'energy-search']},
+    {code:'KAL', name:'Kalos Bloom',      range:[650, 721],  color:'#2a9d8f', icon:'🌸',
+      trainers:['fresh-start', 'great-ball', 'super-potion', 'full-heal']},
+    {code:'ALO', name:'Alola Tides',      range:[722, 809],  color:'#f4a261', icon:'🌺',
+      trainers:['rare-candy', 'poke-ball', 'pep-talk', 'energy-retrieval']},
+    {code:'GAL', name:'Galar Highlands',  range:[810, 905],  color:'#c1121f', icon:'🛡️',
+      trainers:['call-out', 'evolution-incense', 'potion', 'nest-ball']},
+    {code:'PAL', name:'Paldea Frontier',  range:[906, 1025], color:'#7b2cbf', icon:'🧭',
+      trainers:['pokemon-nurse', 'energy-switch', 'professors-notes', 'fresh-start']},
   ];
   const PACK_PRICE = 600;
 
@@ -54,6 +67,9 @@ const Cards = (() => {
     'helpful-friend':  {name:'Helpful Friend',   sub:'supporter', rarity:'common',   text:'Draw 3 cards.'},
     'pep-talk':        {name:'Pep Talk',         sub:'supporter', rarity:'uncommon', text:'Shuffle your hand into your deck. Then, draw 6 cards.'},
     'call-out':        {name:'Call Out',         sub:'supporter', rarity:'rare',     text:'Switch in 1 of your opponent’s Benched Pokémon to the Active Spot.'},
+    'evolution-incense':{name:'Evolution Incense',sub:'item',     rarity:'uncommon', text:'Search your deck for an Evolution Pokémon, reveal it, and put it into your hand. Then, shuffle your deck.'},
+    'energy-switch':   {name:'Energy Switch',    sub:'item',      rarity:'uncommon', text:'Move a basic Energy from 1 of your Pokémon to another of your Pokémon.'},
+    'fresh-start':     {name:'Fresh Start',      sub:'supporter', rarity:'uncommon', text:'Each player shuffles their hand into their deck and draws 4 cards.'},
     'pokemon-nurse':   {name:'Pokémon Nurse',    sub:'supporter', rarity:'uncommon', text:'Heal all damage from 1 of your Pokémon. Then, discard all Energy from that Pokémon.'},
   };
 
@@ -196,7 +212,14 @@ const Cards = (() => {
       return {b, s1: s1[0], s2: s2[0], score: power * (0.6 + quality) + rng() * 120 * (1.2 - quality)};
     }).sort((a, z) => z.score - a.score);
     const deck = {};
-    const add = (c, n) => { if (!c) return 0; const k = Math.min(n, avail(c.id) - (deck[c.id] || 0), 4 - (deck[c.id] || 0)); if (k > 0) deck[c.id] = (deck[c.id] || 0) + k; return Math.max(0, k); };
+    // max 4 copies per card *name* (reprints share the limit)
+    const byName = {};
+    const add = (c, n) => {
+      if (!c) return 0;
+      const k = Math.min(n, avail(c.id) - (deck[c.id] || 0), 4 - (byName[c.name] || 0));
+      if (k > 0) { deck[c.id] = (deck[c.id] || 0) + k; byName[c.name] = (byName[c.name] || 0) + k; }
+      return Math.max(0, k);
+    };
     let pc = 0;
     for (const L of lines) {
       if (pc >= 18) break;
@@ -212,12 +235,13 @@ const Cards = (() => {
     const hasStage2 = Object.keys(deck).some(id => ALL[id].stage === 2);
     const trainerPlan = [['professors-notes', 4], ['nest-ball', 4], ['poke-ball', 2], ['helpful-friend', 3], ['potion', 2], ['switch', 2],
       ['great-ball', 2], ['energy-search', 1], ['rare-candy', hasStage2 ? 3 : 0], ['call-out', quality > .5 ? 2 : 1],
-      ['super-potion', 1], ['full-heal', 1], ['energy-retrieval', 1], ['pep-talk', 2], ['pokemon-nurse', 1]];
+      ['evolution-incense', 2], ['super-potion', 1], ['full-heal', 1], ['energy-retrieval', 1], ['pep-talk', 2], ['pokemon-nurse', 1]];
     let tc = 0;
     for (const [key, n] of trainerPlan) {
       if (tc >= 18 || !n) continue;
       const cards = Object.values(ALL).filter(c => c.kind === 'trainer' && c.key === key);
-      for (const c of cards) { if (tc >= 18) break; tc += add(c, Math.min(n, 18 - tc)); }
+      let want = n; // spread the wanted copies over whichever printings are available
+      for (const c of cards) { if (tc >= 18 || want <= 0) break; const k = add(c, Math.min(want, 18 - tc)); tc += k; want -= k; }
     }
     const count = Object.values(deck).reduce((a, b) => a + b, 0);
     const need = size - count;
