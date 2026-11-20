@@ -34,7 +34,6 @@ const Battle = (() => {
     const S = key === 'p' ? B.P : B.E;
     S.mon = mon; S.vol = Engine.newVol(); S.name = sideName(key, mon);
     B.disp[key] = mon.hp;
-    if (key === 'p') B.participants.add(mon.uid);
     renderSide(key);
     renderDots();
   }
@@ -192,7 +191,7 @@ const Battle = (() => {
     const first = G.team.findIndex(m => m.hp > 0);
     if (first < 0) { UI.toast('All your Pokémon have fainted — visit the Pokémon Center!', 'bad'); return; }
     B = {...opts, foeIdx: 0, active: first, P: {key: 'p'}, E: {key: 'e'}, disp: {p: 0, e: 0},
-      participants: new Set(), runs: 0, busy: true, over: false};
+      runs: 0, busy: true, over: false};
     B.foes.forEach(f => Store.see(f));
     UI.go('battle');
     el('b-result').classList.remove('show');
@@ -292,16 +291,22 @@ const Battle = (() => {
     return changed ? 'changed' : null;
   }
 
+  // Team-wide Exp. Share: the active Pokémon gets full EXP and every other
+  // non-fainted party member gets half, whether or not it battled.
   async function awardExp(foe) {
     const base = Engine.expYield(foe, B.kind !== 'wild');
-    const sayP = async text => { renderSide('p'); await say(text); };
-    for (const mon of G.team.filter(m => B.participants.has(m.uid) && m.hp > 0 && m.level < 100)) {
-      const amt = mon === B.P.mon ? base : Math.max(1, Math.floor(base / 2));
-      await say(`${Engine.displayName(mon)} gained ${amt} Exp. Points!`);
-      await Progress.addExp(mon, amt, mon === B.P.mon ? sayP : say);
-      if (mon === B.P.mon) { B.disp.p = mon.hp; renderSide('p'); }
+    const share = Math.max(1, Math.floor(base / 2));
+    const active = B.P.mon;
+    if (active.hp > 0 && active.level < 100) {
+      await say(`${Engine.displayName(active)} gained ${base} Exp. Points!`);
+      await Progress.addExp(active, base, async text => { renderSide('p'); await say(text); });
+      B.disp.p = active.hp; renderSide('p');
     }
-    B.participants = new Set([B.P.mon.uid]);
+    const rest = G.team.filter(m => m !== active && m.hp > 0 && m.level < 100);
+    if (!rest.length) return;
+    await say(rest.length === 1 ? `${Engine.displayName(rest[0])} gained ${share} Exp. Points via Exp. Share!`
+      : `The rest of your team gained ${share} Exp. Points via Exp. Share!`);
+    for (const mon of rest) await Progress.addExp(mon, share, say);
   }
 
   // ── player actions ───────────────────────────────────────────────────────

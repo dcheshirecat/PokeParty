@@ -48,6 +48,7 @@ Scripts are plain `<script>` files loaded in order (no modules), so they work fr
 - Moves can be multi-hit, draining, recoil, healing, recharge or flinch moves, and Struggle is used when PP runs out.
 - Trainer AI scores every move. Gym Leaders and the League pick strong moves almost every turn and send out good type matchups.
 - Catch chance uses each species' real catch rate, current HP, status and ball type.
+- Exp. Share for the whole team: when a foe faints, the active Pokémon gets full EXP and every other non-fainted party member gets half, even if it never entered the battle.
 - Pokémon learn moves on level-up (with a prompt to forget one when they already know four). They evolve by level, by stones or other items, or with a Link Cable for trade evolutions.
 
 ## Card game
