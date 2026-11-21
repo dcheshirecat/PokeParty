@@ -66,14 +66,31 @@ const Battle = (() => {
       <div class="bi-row">${UI.statusBadge(m.status)}<div class="hp"><div class="hp-fill" style="width:${pct}%;background:${UI.hpColor(pct)}"></div></div></div>
       ${key === 'p' ? `<div class="bi-hp">${Math.max(0, Math.round(B.disp.p))} / ${m.stats.hp}</div>
         <div class="xp"><div class="xp-fill" style="width:${UI.expPct(m)}%"></div></div>` : ''}<div class="bi-dots"></div>`;
+    setSprite(key, m);
+  }
+  // Swap a sprite's image without ever showing the previous Pokémon: the old
+  // picture is hidden at once, and B.ready[key] resolves when the new one is
+  // on screen (or after a timeout, so a slow network can't stall the battle).
+  function setSprite(key, m) {
     const img = el('b-img-' + key);
     const src = API.art(m.id, m.shiny);
-    if (img.dataset.src !== src) {
-      img.dataset.src = src;
-      img.onerror = () => { img.onerror = null; img.src = API.icon(m.id); };
+    if (img.dataset.src === src) return;
+    img.dataset.src = src;
+    img.style.visibility = 'hidden';
+    B.ready[key] = new Promise(res => {
+      let finished = false;
+      const done = () => { if (finished) return; finished = true; if (img.dataset.src === src) img.style.visibility = ''; res(); };
+      img.onload = done;
+      img.onerror = () => {
+        if (img.src !== API.icon(m.id)) img.src = API.icon(m.id); // fall back to the small sprite
+        else done();
+      };
+      setTimeout(done, 5000);
       img.src = src;
-    }
+      if (img.complete && img.naturalWidth) done();
+    });
   }
+  const spriteReady = key => B.ready[key] || Promise.resolve();
   function tweenHp(key, to) {
     const S = key === 'p' ? B.P : B.E;
     const from = B.disp[key], max = S.mon.stats.hp, dur = 520 / spd();
@@ -168,6 +185,7 @@ const Battle = (() => {
     const mon = G.team[idx];
     B.active = idx;
     setActive('p', mon);
+    await spriteReady('p');
     el('b-spr-p').classList.remove('gone');
     await say(first ? `Go! ${Engine.displayName(mon)}!` : `Go, ${Engine.displayName(mon)}!`);
     await anim('b-spr-p', 'enter', 450);
@@ -175,6 +193,7 @@ const Battle = (() => {
   async function sendOutFoe(idx) {
     B.foeIdx = idx;
     setActive('e', B.foes[idx]);
+    await spriteReady('e');
     el('b-info-e').classList.remove('hidden');
     el('b-spr-e').classList.remove('gone');
     if (B.kind !== 'wild') await say(`${B.trainer.name} sent out ${B.E.mon.name}!`);
@@ -191,7 +210,7 @@ const Battle = (() => {
     const first = G.team.findIndex(m => m.hp > 0);
     if (first < 0) { UI.toast('All your Pokémon have fainted — visit the Pokémon Center!', 'bad'); return; }
     B = {...opts, foeIdx: 0, active: first, P: {key: 'p'}, E: {key: 'e'}, disp: {p: 0, e: 0},
-      runs: 0, busy: true, over: false};
+      runs: 0, busy: true, over: false, ready: {}};
     B.foes.forEach(f => Store.see(f));
     UI.go('battle');
     el('b-result').classList.remove('show');
@@ -210,6 +229,8 @@ const Battle = (() => {
       const img = $('img', tp), fb = $('.tp-emoji', tp);
       fb.textContent = B.trainer.emoji || '🧑';
       img.style.display = ''; fb.style.display = 'none';
+      img.style.visibility = 'hidden';
+      img.onload = () => { img.style.visibility = ''; };
       img.onerror = () => { img.style.display = 'none'; fb.style.display = ''; };
       img.src = B.trainer.sprite || '';
       tp.classList.add('show');
@@ -223,6 +244,7 @@ const Battle = (() => {
       tp.classList.remove('show');
       el('b-info-e').classList.remove('hidden');
       setActive('e', B.foes[0]);
+      await spriteReady('e');
       el('b-spr-e').classList.remove('gone');
       anim('b-spr-e', 'enter', 450);
       if (B.E.mon.shiny) { SFX.shiny(); anim('b-spr-e', 'sparkle', 1200); }

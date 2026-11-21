@@ -51,7 +51,11 @@ UI.Screens.gyms = {
 async function startBoss({kind, who, team, ivFloor, skill, reward, theme, label, next, gymId}) {
   if (!G.team.some(m => m.hp > 0)) { UI.toast('Heal your team first!', 'bad'); return; }
   try {
-    const foes = await UI.busy(`${who.name} is getting ready…`, () => Factory.fixedTeam(team, ivFloor));
+    const foes = await UI.busy(`${who.name} is getting ready…`, async () => {
+      const f = await Factory.fixedTeam(team, ivFloor);
+      await UI.preload([SHOWDOWN + who.sprite + '.png', ...f.map(m => API.art(m.id, m.shiny))]);
+      return f;
+    });
     Battle.start({kind, foes, skill, reward, gymId, label, next, returnTo: 'gyms',
       route: theme, theme,
       trainer: {name: who.name, title: who.title, sprite: SHOWDOWN + who.sprite + '.png', emoji: who.emoji, quote: who.quote}});

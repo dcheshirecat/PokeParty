@@ -147,14 +147,22 @@ function battleTheme(type) {
 Act.wild = async () => {
   const route = Store.currentRoute();
   try {
-    const foe = await UI.busy('Searching the tall grass…', () => Factory.wild(route));
+    const foe = await UI.busy('Searching the tall grass…', async () => {
+      const f = await Factory.wild(route);
+      await UI.preload([API.art(f.id, f.shiny)]);
+      return f;
+    });
     Battle.start({kind: 'wild', foes: [foe], skill: 0, route, label: `${route.emoji} ${route.name}`, again: Act.wild});
   } catch (e) { console.error(e); UI.toast('Connection problem — try again', 'bad'); }
 };
 Act.trainer = async () => {
   const route = Store.currentRoute();
   try {
-    const t = await UI.busy('Looking for a challenger…', () => Factory.routeTrainer(route));
+    const t = await UI.busy('Looking for a challenger…', async () => {
+      const tr = await Factory.routeTrainer(route);
+      await UI.preload([tr.sprite, ...tr.team.map(m => API.art(m.id, m.shiny))]);
+      return tr;
+    });
     Battle.start({kind: 'trainer', foes: t.team, trainer: t, skill: t.skill, reward: t.reward, route,
       label: `${route.emoji} ${route.name}`, again: Act.trainer});
   } catch (e) { console.error(e); UI.toast('Connection problem — try again', 'bad'); }

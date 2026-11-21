@@ -34,6 +34,12 @@ const UI = (() => {
     el.classList.toggle('show', loadDepth > 0);
     if (on) $('#loading-text').textContent = text;
   }
+  // Resolve once every image URL has loaded (or failed), or after `ms` at most
+  function preload(urls, ms = 5000) {
+    return Promise.race([sleep(ms), Promise.all(urls.filter(Boolean).map(src => new Promise(res => {
+      const im = new Image(); im.onload = im.onerror = res; im.src = src;
+    })))]);
+  }
   async function busy(text, fn) {
     loading(true, text);
     try { return await fn(); } finally { loading(false); }
@@ -203,7 +209,7 @@ const UI = (() => {
     sc.after && sc.after($('#main'), currentParams);
   }
 
-  return {toast, loading, busy, sheet, choose, confirm, prompt, evolutionScene, typeBadge, types, statusBadge,
+  return {toast, loading, busy, preload, sheet, choose, confirm, prompt, evolutionScene, typeBadge, types, statusBadge,
     hpBar, hpColor, expPct, monImg, coinStr, moveChip, moveDesc, Screens, go, refresh, current: () => current};
 })();
 
